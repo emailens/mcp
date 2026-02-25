@@ -1,0 +1,56 @@
+{
+  "name": "@emailens/mcp",
+  "version": "0.1.0",
+  "description": "MCP server for email compatibility analysis — preview, analyze, and list email clients via Claude or any MCP-compatible tool.",
+  "type": "module",
+  "bin": {
+    "emailens-mcp": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "start": "bun run dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "bun run build"
+  },
+  "dependencies": {
+    "@emailens/engine": "^0.1.0",
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "bun-types": "^1.3.9",
+    "tsup": "^8.4.0",
+    "typescript": "^5.9.3"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "email",
+    "email-testing",
+    "compatibility",
+    "claude"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/emailens/mcp.git"
+  },
+  "homepage": "https://github.com/emailens/mcp#readme",
+  "bugs": {
+    "url": "https://github.com/emailens/mcp/issues"
+  }
+}
