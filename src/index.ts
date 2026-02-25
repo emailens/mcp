@@ -9,6 +9,7 @@ import {
   simulateDarkMode,
   EMAIL_CLIENTS,
   type Framework,
+  type CSSWarning,
 } from "@emailens/engine";
 
 function toFramework(format?: string): Framework | undefined {
@@ -22,41 +23,69 @@ const server = new McpServer({
 });
 
 // ── Tool: preview_email ─────────────────────────────────────────
-// @ts-expect-error — MCP SDK overload causes deep type instantiation
-server.tool(
+server.registerTool(
   "preview_email",
-  "Analyze an HTML email and see how it renders across 12 email clients (including HEY Mail and Superhuman). Returns CSS transforms, compatibility warnings, fix suggestions, dark mode simulation, and per-client scores.",
   {
-    html: z.string().describe("The email HTML source code"),
-    clients: z
-      .array(z.string())
-      .optional()
-      .describe(
-        "Optional array of client IDs to filter (e.g. ['gmail_web', 'outlook_windows']). Omit for all clients."
-      ),
-    format: z
-      .enum(["html", "jsx", "mjml", "maizzle"])
-      .optional()
-      .describe(
-        "Input format of the email source: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle'. Controls which framework-specific fix snippets appear in the warnings."
-      ),
+    title: "Preview Email",
+    description:
+      "Analyze an HTML email and see how it renders across 12 email clients (Gmail, Outlook, Apple Mail, Yahoo, Samsung, Thunderbird, HEY, Superhuman). Returns CSS transforms, compatibility warnings with fix snippets, dark mode simulation, and per-client scores.",
+    inputSchema: {
+      html: z.string().describe("The email HTML source code"),
+      clients: z
+        .array(z.string())
+        .optional()
+        .describe(
+          "Optional array of client IDs to filter (e.g. ['gmail-web', 'outlook-windows']). Omit for all clients."
+        ),
+      format: z
+        .enum(["html", "jsx", "mjml", "maizzle"])
+        .optional()
+        .describe(
+          "Input format of the email source: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle'. Controls which framework-specific fix snippets appear in the warnings."
+        ),
+    },
+    annotations: {
+      title: "Preview Email",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
   },
   async ({ html, clients, format }) => {
-    const validClientIds = new Set(EMAIL_CLIENTS.map((c) => c.id));
+    const validClientIds = new Set(EMAIL_CLIENTS.map((c: { id: string }) => c.id));
 
     let transforms = transformForAllClients(html);
     if (clients) {
-      const filter = clients.filter((c) => validClientIds.has(c));
-      transforms = transforms.filter((t) => filter.includes(t.clientId));
+      const filter = clients.filter((c: string) => validClientIds.has(c));
+      if (filter.length === 0) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(
+                {
+                  error: "No valid client IDs provided",
+                  validClientIds: Array.from(validClientIds),
+                },
+                null,
+                2
+              ),
+            },
+          ],
+          isError: true,
+        };
+      }
+      transforms = transforms.filter((t: { clientId: string }) =>
+        filter.includes(t.clientId)
+      );
     }
 
     const warnings = analyzeEmail(html, toFramework(format));
     const scores = generateCompatibilityScore(warnings);
 
-    const darkMode: Record<
-      string,
-      { html: string; warnings: typeof warnings }
-    > = {};
+    const darkMode: Record<string, { html: string; warnings: CSSWarning[] }> =
+      {};
     for (const t of transforms) {
       darkMode[t.clientId] = simulateDarkMode(t.html, t.clientId);
     }
@@ -65,7 +94,10 @@ server.tool(
     const overallScore =
       scoreValues.length > 0
         ? Math.round(
-            scoreValues.reduce((a, b) => a + b.score, 0) / scoreValues.length
+            scoreValues.reduce(
+              (a: number, b: { score: number }) => a + b.score,
+              0
+            ) / scoreValues.length
           )
         : 0;
 
@@ -77,21 +109,26 @@ server.tool(
             {
               overallScore,
               compatibilityScores: scores,
-              cssWarnings: warnings.map((w) => ({
+              cssWarnings: warnings.map((w: CSSWarning) => ({
                 client: w.client,
                 property: w.property,
                 severity: w.severity,
+                message: w.message,
+                suggestion: w.suggestion,
                 fix: w.fix,
               })),
               clientCount: transforms.length,
               darkModeWarnings: Object.entries(darkMode).reduce(
-                (acc, [clientId, dm]) => {
+                (
+                  acc: Record<string, number>,
+                  [clientId, dm]: [string, { warnings: CSSWarning[] }]
+                ) => {
                   if (dm.warnings.length > 0) {
                     acc[clientId] = dm.warnings.length;
                   }
                   return acc;
                 },
-                {} as Record<string, number>
+                {}
               ),
             },
             null,
@@ -104,17 +141,28 @@ server.tool(
 );
 
 // ── Tool: analyze_email ─────────────────────────────────────────
-server.tool(
+server.registerTool(
   "analyze_email",
-  "Quick CSS compatibility analysis — returns warnings and per-client scores without full transforms.",
   {
-    html: z.string().describe("The email HTML source code"),
-    format: z
-      .enum(["html", "jsx", "mjml", "maizzle"])
-      .optional()
-      .describe(
-        "Input format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle'. Determines which framework-specific fix snippets are returned."
-      ),
+    title: "Analyze Email",
+    description:
+      "Quick CSS compatibility analysis — returns warnings and per-client scores without full transforms. Faster than preview_email when you only need the compatibility report.",
+    inputSchema: {
+      html: z.string().describe("The email HTML source code"),
+      format: z
+        .enum(["html", "jsx", "mjml", "maizzle"])
+        .optional()
+        .describe(
+          "Input format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle'. Determines which framework-specific fix snippets are returned."
+        ),
+    },
+    annotations: {
+      title: "Analyze Email",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
   },
   async ({ html, format }) => {
     const warnings = analyzeEmail(html, toFramework(format));
@@ -124,7 +172,10 @@ server.tool(
     const overallScore =
       scoreValues.length > 0
         ? Math.round(
-            scoreValues.reduce((a, b) => a + b.score, 0) / scoreValues.length
+            scoreValues.reduce(
+              (a: number, b: { score: number }) => a + b.score,
+              0
+            ) / scoreValues.length
           )
         : 0;
 
@@ -137,11 +188,12 @@ server.tool(
               overallScore,
               scores,
               warningCount: warnings.length,
-              warnings: warnings.map((w) => ({
+              warnings: warnings.map((w: CSSWarning) => ({
                 client: w.client,
                 property: w.property,
                 severity: w.severity,
                 message: w.message,
+                suggestion: w.suggestion,
                 fix: w.fix,
               })),
             },
@@ -155,17 +207,41 @@ server.tool(
 );
 
 // ── Tool: list_clients ──────────────────────────────────────────
-server.tool(
+server.registerTool(
   "list_clients",
-  "List all supported email client IDs and their display names.",
-  {},
+  {
+    title: "List Email Clients",
+    description:
+      "List all 12 supported email client IDs, display names, categories, rendering engines, and dark mode support.",
+    annotations: {
+      title: "List Email Clients",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+  },
   async () => {
     return {
       content: [
         {
           type: "text" as const,
           text: JSON.stringify(
-            EMAIL_CLIENTS.map((c) => ({ id: c.id, name: c.name })),
+            EMAIL_CLIENTS.map(
+              (c: {
+                id: string;
+                name: string;
+                category: string;
+                engine: string;
+                darkModeSupport: boolean;
+              }) => ({
+                id: c.id,
+                name: c.name,
+                category: c.category,
+                engine: c.engine,
+                darkModeSupport: c.darkModeSupport,
+              })
+            ),
             null,
             2
           ),
