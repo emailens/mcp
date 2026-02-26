@@ -7,6 +7,8 @@ import {
   analyzeEmail,
   generateCompatibilityScore,
   simulateDarkMode,
+  generateFixPrompt,
+  estimateAiFixTokens,
   EMAIL_CLIENTS,
   type Framework,
   type CSSWarning,
@@ -19,7 +21,7 @@ function toFramework(format?: string): Framework | undefined {
 
 const server = new McpServer({
   name: "emailens",
-  version: "0.1.0",
+  version: "0.2.0",
 });
 
 // ── Tool: preview_email ─────────────────────────────────────────
@@ -116,6 +118,7 @@ server.registerTool(
                 message: w.message,
                 suggestion: w.suggestion,
                 fix: w.fix,
+                fixType: w.fixType,
               })),
               clientCount: transforms.length,
               darkModeWarnings: Object.entries(darkMode).reduce(
@@ -195,11 +198,122 @@ server.registerTool(
                 message: w.message,
                 suggestion: w.suggestion,
                 fix: w.fix,
+                fixType: w.fixType,
               })),
             },
             null,
             2
           ),
+        },
+      ],
+    };
+  }
+);
+
+// ── Tool: fix_email ─────────────────────────────────────────────
+server.registerTool(
+  "fix_email",
+  {
+    title: "Fix Email",
+    description:
+      "Generate a structured fix prompt for email compatibility issues. Returns a markdown prompt with the original code, all detected issues (with fix type: CSS or structural), fix snippets, and format-specific instructions. The AI assistant can then apply these fixes directly. Use after preview_email or analyze_email to fix the issues found.",
+    inputSchema: {
+      html: z.string().describe("The email HTML source code to fix"),
+      format: z
+        .enum(["html", "jsx", "mjml", "maizzle"])
+        .optional()
+        .describe(
+          "Input format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle'. Controls the fix syntax in the prompt."
+        ),
+      scope: z
+        .enum(["all", "current"])
+        .optional()
+        .describe(
+          "Fix scope: 'all' (default) fixes for all clients, 'current' fixes for a single client (requires selectedClientId)."
+        ),
+      selectedClientId: z
+        .string()
+        .optional()
+        .describe(
+          "Client ID to scope fixes to (e.g. 'outlook-windows'). Only used when scope is 'current'."
+        ),
+    },
+    annotations: {
+      title: "Fix Email",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+  },
+  async ({ html, format, scope, selectedClientId }) => {
+    const framework = toFramework(format);
+    const fixScope = scope === "current" ? "current" : "all";
+    const inputFormat = format || "html";
+
+    const warnings = analyzeEmail(html, framework);
+    const scores = generateCompatibilityScore(warnings);
+
+    if (warnings.length === 0) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify(
+              { message: "No compatibility issues found — nothing to fix.", overallScore: 100 },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
+
+    // Estimate tokens
+    const estimate = await estimateAiFixTokens({
+      originalHtml: html,
+      warnings,
+      scores,
+      scope: fixScope,
+      selectedClientId,
+      format: inputFormat,
+    });
+
+    // Generate the fix prompt
+    const prompt = generateFixPrompt({
+      originalHtml: html,
+      warnings,
+      scores,
+      scope: fixScope,
+      selectedClientId,
+      format: inputFormat,
+    });
+
+    const structuralWarnings = warnings.filter((w) => w.fixType === "structural");
+
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify(
+            {
+              totalWarnings: warnings.length,
+              structuralWarnings: structuralWarnings.length,
+              cssWarnings: warnings.length - structuralWarnings.length,
+              tokenEstimate: {
+                inputTokens: estimate.inputTokens,
+                estimatedOutputTokens: estimate.estimatedOutputTokens,
+                truncated: estimate.truncated,
+              },
+              note: "Apply the fixes in the prompt below to the email code. Structural issues require HTML restructuring (tables, VML conditionals), not just CSS changes.",
+            },
+            null,
+            2
+          ),
+        },
+        {
+          type: "text" as const,
+          text: prompt,
         },
       ],
     };

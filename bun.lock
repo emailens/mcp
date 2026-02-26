@@ -5,7 +5,7 @@
     "": {
       "name": "@emailens/mcp",
       "dependencies": {
-        "@emailens/engine": "file:../engine",
+        "@emailens/engine": "^0.3.0",
         "@modelcontextprotocol/sdk": "^1.12.0",
         "zod": "^3.24.0",
       },
@@ -18,7 +18,7 @@
     },
   },
   "packages": {
-    "@emailens/engine": ["@emailens/engine@file:../engine", { "dependencies": { "cheerio": "^1.2.0", "css-tree": "^3.1.0" }, "devDependencies": { "@types/css-tree": "^2.3.11", "@types/node": "^25.3.0", "bun-types": "^1.3.9", "tsup": "^8.4.0", "typescript": "^5.9.3" } }],
+    "@emailens/engine": ["@emailens/engine@0.3.1", "", { "dependencies": { "cheerio": "^1.2.0", "css-tree": "^3.1.0" } }, "sha512-xux4+sQ7+pcxCX/067yx6RvrvvitlpVa+aoLqm04ElXMBwWriwQ80UB/6nRPvhAONdM2Z1haKfZucXGSg2UfIw=="],
 
     "@esbuild/aix-ppc64": ["@esbuild/aix-ppc64@0.27.3", "", { "os": "aix", "cpu": "ppc64" }, "sha512-9fJMTNFTWZMh5qwrBItuziu834eOCUcEqymSH7pY+zoMVEZg3gcPuBNxH1EvfVYe9h0x/Ptw8KBzv7qxb7l8dg=="],
 
@@ -133,8 +133,6 @@
     "@rollup/rollup-win32-x64-gnu": ["@rollup/rollup-win32-x64-gnu@4.59.0", "", { "os": "win32", "cpu": "x64" }, "sha512-laBkYlSS1n2L8fSo1thDNGrCTQMmxjYY5G0WFWjFFYZkKPjsMBsgJfGf4TLxXrF6RyhI60L8TMOjBMvXiTcxeA=="],
 
     "@rollup/rollup-win32-x64-msvc": ["@rollup/rollup-win32-x64-msvc@4.59.0", "", { "os": "win32", "cpu": "x64" }, "sha512-2HRCml6OztYXyJXAvdDXPKcawukWY2GpR5/nxKp4iBgiO3wcoEGkAaqctIbZcNB6KlUQBIqt8VYkNSj2397EfA=="],
-
-    "@types/css-tree": ["@types/css-tree@2.3.11", "", {}, "sha512-aEokibJOI77uIlqoBOkVbaQGC9zII0A+JH1kcTNKW2CwyYWD8KM6qdo+4c77wD3wZOQfJuNWAr9M4hdk+YhDIg=="],
 
     "@types/estree": ["@types/estree@1.0.8", "", {}, "sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w=="],
 
