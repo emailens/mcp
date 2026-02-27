@@ -9,9 +9,12 @@ import {
   simulateDarkMode,
   generateFixPrompt,
   estimateAiFixTokens,
+  auditEmail,
+  structuralWarnings,
   EMAIL_CLIENTS,
   type Framework,
   type CSSWarning,
+  type AuditReport,
 } from "@emailens/engine";
 
 function toFramework(format?: string): Framework | undefined {
@@ -21,7 +24,7 @@ function toFramework(format?: string): Framework | undefined {
 
 const server = new McpServer({
   name: "emailens",
-  version: "0.2.0",
+  version: "0.3.0",
 });
 
 // ── Tool: preview_email ─────────────────────────────────────────
@@ -143,13 +146,94 @@ server.registerTool(
   }
 );
 
+// ── Tool: audit_email ───────────────────────────────────────────
+server.registerTool(
+  "audit_email",
+  {
+    title: "Audit Email",
+    description:
+      "Run ALL email checks in one call: CSS compatibility, spam scoring, link validation, accessibility audit, and image analysis. Returns a unified report. Use --skip to omit specific checks.",
+    inputSchema: {
+      html: z.string().describe("The email HTML source code"),
+      format: z
+        .enum(["html", "jsx", "mjml", "maizzle"])
+        .optional()
+        .describe(
+          "Input format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle'."
+        ),
+      skip: z
+        .array(z.enum(["spam", "links", "accessibility", "images", "compatibility"]))
+        .optional()
+        .describe(
+          "Array of checks to skip (e.g. ['spam', 'images'])."
+        ),
+    },
+    annotations: {
+      title: "Audit Email",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+  },
+  async ({ html, format, skip }) => {
+    const report = auditEmail(html, {
+      framework: toFramework(format),
+      skip,
+    });
+
+    const scoreValues = Object.values(report.compatibility.scores);
+    const overallCompatibility =
+      scoreValues.length > 0
+        ? Math.round(
+            scoreValues.reduce(
+              (a: number, b: { score: number }) => a + b.score,
+              0
+            ) / scoreValues.length
+          )
+        : 0;
+
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify(
+            {
+              overallCompatibility,
+              compatibility: {
+                scores: report.compatibility.scores,
+                warningCount: report.compatibility.warnings.length,
+                warnings: report.compatibility.warnings.map((w: CSSWarning) => ({
+                  client: w.client,
+                  property: w.property,
+                  severity: w.severity,
+                  message: w.message,
+                  suggestion: w.suggestion,
+                  fix: w.fix,
+                  fixType: w.fixType,
+                })),
+              },
+              spam: report.spam,
+              links: report.links,
+              accessibility: report.accessibility,
+              images: report.images,
+            },
+            null,
+            2
+          ),
+        },
+      ],
+    };
+  }
+);
+
 // ── Tool: analyze_email ─────────────────────────────────────────
 server.registerTool(
   "analyze_email",
   {
     title: "Analyze Email",
     description:
-      "Quick CSS compatibility analysis — returns warnings and per-client scores without full transforms. Faster than preview_email when you only need the compatibility report.",
+      "CSS compatibility analysis with quality reports — returns warnings, per-client scores, plus spam, link, accessibility, and image analysis. For compatibility-only results, use skip. For full transforms + dark mode, use preview_email.",
     inputSchema: {
       html: z.string().describe("The email HTML source code"),
       format: z
@@ -168,10 +252,9 @@ server.registerTool(
     },
   },
   async ({ html, format }) => {
-    const warnings = analyzeEmail(html, toFramework(format));
-    const scores = generateCompatibilityScore(warnings);
+    const report = auditEmail(html, { framework: toFramework(format) });
 
-    const scoreValues = Object.values(scores);
+    const scoreValues = Object.values(report.compatibility.scores);
     const overallScore =
       scoreValues.length > 0
         ? Math.round(
@@ -189,9 +272,9 @@ server.registerTool(
           text: JSON.stringify(
             {
               overallScore,
-              scores,
-              warningCount: warnings.length,
-              warnings: warnings.map((w: CSSWarning) => ({
+              scores: report.compatibility.scores,
+              warningCount: report.compatibility.warnings.length,
+              warnings: report.compatibility.warnings.map((w: CSSWarning) => ({
                 client: w.client,
                 property: w.property,
                 severity: w.severity,
@@ -200,6 +283,10 @@ server.registerTool(
                 fix: w.fix,
                 fixType: w.fixType,
               })),
+              spam: report.spam,
+              links: report.links,
+              accessibility: report.accessibility,
+              images: report.images,
             },
             null,
             2
@@ -289,7 +376,7 @@ server.registerTool(
       format: inputFormat,
     });
 
-    const structuralWarnings = warnings.filter((w) => w.fixType === "structural");
+    const structural = structuralWarnings(warnings);
 
     return {
       content: [
@@ -298,8 +385,8 @@ server.registerTool(
           text: JSON.stringify(
             {
               totalWarnings: warnings.length,
-              structuralWarnings: structuralWarnings.length,
-              cssWarnings: warnings.length - structuralWarnings.length,
+              structuralWarnings: structural.length,
+              cssWarnings: warnings.length - structural.length,
               tokenEstimate: {
                 inputTokens: estimate.inputTokens,
                 estimatedOutputTokens: estimate.estimatedOutputTokens,
