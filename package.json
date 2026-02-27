@@ -1,6 +1,6 @@
 {
   "name": "@emailens/mcp",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "MCP server for email compatibility analysis — preview, analyze, fix, and list email clients via Claude or any MCP-compatible tool.",
   "type": "module",
   "bin": {
