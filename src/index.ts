@@ -17,6 +17,14 @@ import {
   type AuditReport,
 } from "@emailens/engine";
 
+// toPlainText available in engine >=0.8.6
+let toPlainText: ((html: string) => string) | null = null;
+try {
+  ({ toPlainText } = await import("@emailens/engine"));
+} catch {
+  // older engine version
+}
+
 function toFramework(format?: string): Framework | undefined {
   if (format === "jsx" || format === "mjml" || format === "maizzle") return format;
   return undefined;
@@ -106,6 +114,9 @@ server.registerTool(
           )
         : 0;
 
+    // Generate plain text version for multipart emails
+    const plainText = toPlainText ? toPlainText(html) : undefined;
+
     return {
       content: [
         {
@@ -123,6 +134,7 @@ server.registerTool(
                 fix: w.fix,
                 fixType: w.fixType,
               })),
+              ...(plainText ? { plainText } : {}),
               clientCount: transforms.length,
               darkModeWarnings: Object.entries(darkMode).reduce(
                 (
