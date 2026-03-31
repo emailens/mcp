@@ -41,7 +41,7 @@ export async function apiRequest<T = unknown>(
     }
 
     if (response.status === 403) {
-      const data = await response.json().catch(() => ({}));
+      const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
       return {
         isError: true,
         error: data.upgrade
@@ -51,7 +51,7 @@ export async function apiRequest<T = unknown>(
     }
 
     if (response.status === 429) {
-      const data = await response.json().catch(() => ({}));
+      const data = (await response.json().catch(() => ({}))) as Record<string, number>;
       return {
         isError: true,
         error: `Daily quota exceeded${data.limit ? ` (${data.limit - (data.remaining ?? 0)}/${data.limit})` : ""}. Resets tomorrow. Upgrade at emailens.dev/pricing?ref=mcp`,
@@ -59,8 +59,8 @@ export async function apiRequest<T = unknown>(
     }
 
     if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      return { isError: true, error: data.error ?? `API error: ${response.status}` };
+      const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+      return { isError: true, error: (data.error as string) ?? `API error: ${response.status}` };
     }
 
     const data = (await response.json()) as T;
