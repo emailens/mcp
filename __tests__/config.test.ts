@@ -1,4 +1,5 @@
-import { describe, test, expect, beforeEach, afterEach } from "bun:test";
+import { describe, test, expect, afterEach } from "bun:test";
+import { config } from "../src/config";
 
 describe("config", () => {
   const originalEnv = { ...process.env };
@@ -7,25 +8,22 @@ describe("config", () => {
     process.env = { ...originalEnv };
   });
 
-  test("defaults: no API key, hosted is false, default URL", async () => {
+  test("defaults: no API key, hosted is false, default URL", () => {
     delete process.env.EMAILENS_API_KEY;
     delete process.env.EMAILENS_API_URL;
-    const { config } = await import("../src/config");
     expect(config.apiKey).toBeNull();
     expect(config.apiUrl).toBe("https://emailens.dev");
     expect(config.isHosted).toBe(false);
   });
 
-  test("reads EMAILENS_API_KEY from env", async () => {
+  test("reads EMAILENS_API_KEY from env", () => {
     process.env.EMAILENS_API_KEY = "ek_live_testkey123456789012345678";
-    const mod = await import("../src/config?t=" + Date.now());
-    expect(mod.config.apiKey).toBe("ek_live_testkey123456789012345678");
-    expect(mod.config.isHosted).toBe(true);
+    expect(config.apiKey).toBe("ek_live_testkey123456789012345678");
+    expect(config.isHosted).toBe(true);
   });
 
-  test("reads EMAILENS_API_URL from env", async () => {
+  test("reads EMAILENS_API_URL from env", () => {
     process.env.EMAILENS_API_URL = "https://staging.emailens.dev";
-    const mod = await import("../src/config?t=" + Date.now());
-    expect(mod.config.apiUrl).toBe("https://staging.emailens.dev");
+    expect(config.apiUrl).toBe("https://staging.emailens.dev");
   });
 });
