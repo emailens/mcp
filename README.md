@@ -1,20 +1,20 @@
 # @emailens/mcp
 
-MCP (Model Context Protocol) server for email compatibility analysis. Enables Claude and other MCP-compatible AI assistants to preview, analyze, and score HTML emails across 12 email clients.
+MCP server for email compatibility analysis. Analyze, preview, diff, and fix HTML emails across 15 email clients — plus capture real screenshots and create shareable links with an optional API key.
 
-Built on top of [`@emailens/engine`](https://github.com/emailens/engine).
+Built on [`@emailens/engine`](https://github.com/emailens/engine).
 
 ## Install
 
 ```bash
-npm install -g @emailens/mcp
-# or
-bunx @emailens/mcp
+npx -y @emailens/mcp
 ```
 
-## Usage with Claude Desktop
+## Setup
 
-Add to your Claude Desktop config (`claude_desktop_config.json`):
+### Claude Desktop
+
+Add to `claude_desktop_config.json`:
 
 ```json
 {
@@ -27,154 +27,150 @@ Add to your Claude Desktop config (`claude_desktop_config.json`):
 }
 ```
 
-Or if using Bun:
-
-```json
-{
-  "mcpServers": {
-    "emailens": {
-      "command": "bunx",
-      "args": ["@emailens/mcp"]
-    }
-  }
-}
-```
-
-## Usage with Claude Code
-
-Add to your Claude Code settings:
+### Claude Code
 
 ```bash
 claude mcp add emailens -- npx -y @emailens/mcp
 ```
 
+### With API Key (optional — unlocks screenshots + sharing)
+
+```json
+{
+  "mcpServers": {
+    "emailens": {
+      "command": "npx",
+      "args": ["-y", "@emailens/mcp"],
+      "env": {
+        "EMAILENS_API_KEY": "ek_live_..."
+      }
+    }
+  }
+}
+```
+
+Get your free API key at [emailens.dev/settings/api-keys](https://emailens.dev/settings/api-keys).
+
 ## Tools
 
-The server exposes four tools:
+### Local Tools (no account needed)
 
-### `preview_email`
+#### `preview_email`
 
-Full email compatibility preview — transforms HTML per client, analyzes CSS, generates scores, and simulates dark mode.
+Full email compatibility preview — transforms HTML for 15 clients, analyzes CSS, generates scores, simulates dark mode, checks inbox preview and email size.
 
-**Parameters:**
-
-| Name | Type | Required | Description |
+| Parameter | Type | Required | Description |
 |---|---|---|---|
-| `html` | string | Yes | The email HTML source code |
-| `clients` | string[] | No | Filter to specific client IDs (e.g. `["gmail_web", "outlook_windows"]`). Omit for all 12 clients. |
-| `format` | enum | No | Input format: `"html"` (default), `"jsx"` (React Email), `"mjml"`, or `"maizzle"`. Controls which framework-specific fix snippets appear. |
+| `html` | string | Yes | Email HTML source |
+| `clients` | string[] | No | Filter to specific client IDs |
+| `format` | enum | No | `"html"`, `"jsx"`, `"mjml"`, `"maizzle"` |
 
-**Returns:** JSON with `overallScore` (0–100), `compatibilityScores` (per-client), `cssWarnings` (with fix snippets), `clientCount`, and `darkModeWarnings`.
+#### `analyze_email`
 
-**Example prompt:**
-> Analyze this email HTML and tell me what will break in Gmail and Outlook:
-> ```html
-> <div style="display: flex; gap: 16px; border-radius: 8px;">...</div>
-> ```
+Quick CSS compatibility analysis — returns per-client scores and warnings. Faster than `audit_email` when you only need CSS compatibility.
 
-### `analyze_email`
-
-Quick CSS compatibility analysis — returns warnings and per-client scores without full transforms. Faster than `preview_email` when you only need the compatibility report.
-
-**Parameters:**
-
-| Name | Type | Required | Description |
+| Parameter | Type | Required | Description |
 |---|---|---|---|
-| `html` | string | Yes | The email HTML source code |
-| `format` | enum | No | Input format: `"html"`, `"jsx"`, `"mjml"`, or `"maizzle"` |
+| `html` | string | Yes | Email HTML source |
+| `format` | enum | No | Input format |
 
-**Returns:** JSON with `overallScore`, `scores` (per-client), `warningCount`, and `warnings` (with severity, message, and fix).
+#### `audit_email`
 
-**Example prompt:**
-> What's the compatibility score for this React Email template?
+Comprehensive quality audit — CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), and template variables.
 
-### `fix_email`
-
-Generate a structured fix prompt for email compatibility issues. Analyzes the HTML, classifies each warning as CSS-only or structural (requires HTML restructuring), estimates token usage, and returns a markdown prompt the AI assistant can apply directly. Use after `preview_email` or `analyze_email` to fix the issues found.
-
-**Parameters:**
-
-| Name | Type | Required | Description |
+| Parameter | Type | Required | Description |
 |---|---|---|---|
-| `html` | string | Yes | The email HTML source code to fix |
-| `format` | enum | No | Input format: `"html"` (default), `"jsx"`, `"mjml"`, or `"maizzle"`. Controls the fix syntax. |
-| `scope` | enum | No | `"all"` (default) or `"current"` (requires `selectedClientId`) |
-| `selectedClientId` | string | No | Client ID to scope fixes to (e.g. `"outlook-windows"`). Only used when scope is `"current"`. |
+| `html` | string | Yes | Email HTML source |
+| `format` | enum | No | Input format |
+| `skip` | string[] | No | Checks to skip (e.g. `["spam", "images"]`) |
 
-**Returns:** JSON with `totalWarnings`, `structuralWarnings`, `cssWarnings`, `tokenEstimate`, and the full fix prompt as markdown.
+#### `fix_email`
 
-**Example prompt:**
-> Fix this email HTML so it works in Outlook Windows — it uses flexbox and word-break which aren't supported.
+Generate a structured fix prompt for compatibility issues. Returns markdown with fix instructions that the AI can apply directly.
 
-### `list_clients`
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `html` | string | Yes | Email HTML to fix |
+| `format` | enum | No | Controls fix syntax |
+| `scope` | enum | No | `"all"` or `"current"` |
+| `selectedClientId` | string | No | Client ID for scoped fixes |
 
-Lists all 12 supported email client IDs, display names, categories, rendering engines, and dark mode support. Useful for discovering valid client IDs to pass to `preview_email` or `fix_email`.
+#### `list_clients`
 
-**Parameters:** None
+List all 15 supported email clients with IDs, names, engines, and dark mode support.
 
-**Returns:** JSON array of `{ id, name, category, engine, darkModeSupport }` objects.
+#### `diff_emails`
 
-**Example prompt:**
-> What email clients does Emailens support?
+Compare two email HTML versions — shows score changes, fixed issues, and introduced issues per client.
 
-## Supported Email Clients
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `before` | string | Yes | Original email HTML |
+| `after` | string | Yes | Modified email HTML |
+| `format` | enum | No | Input format |
 
-| Client | ID | Dark Mode |
-|---|---|---|
-| Gmail | `gmail-web` | Yes |
-| Gmail Android | `gmail-android` | Yes |
-| Gmail iOS | `gmail-ios` | Yes |
-| Outlook 365 | `outlook-web` | Yes |
-| Outlook Windows | `outlook-windows` | No |
-| Apple Mail | `apple-mail-macos` | Yes |
-| Apple Mail iOS | `apple-mail-ios` | Yes |
-| Yahoo Mail | `yahoo-mail` | Yes |
-| Samsung Mail | `samsung-mail` | Yes |
-| Thunderbird | `thunderbird` | No |
-| HEY Mail | `hey-mail` | Yes |
-| Superhuman | `superhuman` | Yes |
+#### `check_deliverability`
 
-## Framework-Aware Fixes
+Check email deliverability for a domain — SPF, DKIM, DMARC, MX, BIMI records with a score and actionable issues.
 
-When you specify a `format`, the fix snippets in warnings are tailored to your framework:
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `domain` | string | Yes | Domain to check (e.g. `"company.com"`) |
 
-- **`jsx`** — References React Email components (`Row`, `Column`, `Font`, `Container` from `@react-email/components`)
-- **`mjml`** — References MJML elements (`mj-section`, `mj-column`, `mj-font`, `mj-style`)
-- **`maizzle`** — References Tailwind CSS classes and Maizzle config (`googleFonts`, MSO conditionals)
-- **`html`** (default) — Generic HTML with VML fallbacks for Outlook
+### Hosted Tools (require `EMAILENS_API_KEY`)
 
-## Fix Types (v0.2.0)
+#### `capture_screenshots`
 
-Every warning now includes a `fixType` field:
+Capture real email screenshots across 15 clients in real browsers. Screenshots are hosted on CDN.
 
-- **`css`** — Can be fixed with CSS swaps or fallbacks
-- **`structural`** — Requires HTML restructuring (tables, VML, MSO conditionals). CSS-only changes will NOT work.
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `html` | string | Yes | Email HTML source |
+| `format` | enum | No | Input format |
+| `clients` | string[] | No | Filter clients |
+| `modes` | string[] | No | `["light"]`, `["dark"]`, or `["light", "dark"]` |
+| `title` | string | No | Name for the preview |
 
-The `fix_email` tool uses this classification to generate targeted fix instructions that the AI assistant can apply directly.
+Free plan: 30 previews/day. [Sign up](https://emailens.dev?ref=mcp)
 
-## How It Works
+#### `share_preview`
 
-The MCP server is a thin wrapper around `@emailens/engine`. For each tool call, it:
+Create a shareable link. Recipients see the full analysis without an account.
 
-1. Validates inputs with Zod schemas
-2. Calls engine functions (`transformForAllClients`, `analyzeEmail`, `generateCompatibilityScore`, `simulateDarkMode`, `generateFixPrompt`, `estimateAiFixTokens`)
-3. Formats and returns JSON results via stdio transport
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `html` | string | Yes | Email HTML source |
+| `title` | string | No | Display title |
+| `format` | enum | No | Input format |
 
-The engine uses [Cheerio](https://cheerio.js.org/) for HTML manipulation and [css-tree](https://github.com/csstree/csstree) for CSS parsing. No external API calls — all analysis and fix prompt generation runs locally. The `fix_email` tool generates a prompt for the AI assistant to apply — it does not call any AI API itself.
+Requires Dev plan ($9/mo). Share links expire after 7 days (Dev) or never (Pro).
+
+## Supported Email Clients (15)
+
+| Client | ID | Dark Mode | Notes |
+|---|---|---|---|
+| Gmail | `gmail-web` | Yes | |
+| Gmail Android | `gmail-android` | Yes | |
+| Gmail iOS | `gmail-ios` | Yes | |
+| Outlook 365 | `outlook-web` | Yes | |
+| Outlook Windows | `outlook-windows` | No | |
+| Outlook Windows Legacy | `outlook-windows-legacy` | No | Deprecated Oct 2026 |
+| Outlook iOS | `outlook-ios` | Yes | New in v0.4.0 |
+| Outlook Android | `outlook-android` | Yes | New in v0.4.0 |
+| Apple Mail | `apple-mail-macos` | Yes | |
+| Apple Mail iOS | `apple-mail-ios` | Yes | |
+| Yahoo Mail | `yahoo-mail` | Yes | |
+| Samsung Mail | `samsung-mail` | Yes | |
+| Thunderbird | `thunderbird` | No | |
+| HEY Mail | `hey-mail` | Yes | |
+| Superhuman | `superhuman` | Yes | |
 
 ## Development
 
 ```bash
-# Install dependencies
 bun install
-
-# Build
 bun run build
-
-# Run locally
-bun run src/index.ts
-
-# Type check
+bun test
 bun run typecheck
 ```
 
