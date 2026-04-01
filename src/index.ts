@@ -14,7 +14,8 @@ import {
   type Framework,
   type CSSWarning,
 } from "@emailens/engine";
-import { checkDeliverability } from "@emailens/engine/server";
+// Lazy-imported: @emailens/engine/server may not exist in all engine versions
+let _checkDeliverability: ((domain: string) => Promise<unknown>) | null = null;
 import { config } from "./config.js";
 import { apiRequest, mcpError, noApiKeyError } from "./hosted.js";
 
@@ -59,7 +60,7 @@ server.registerTool(
     const framework = toFramework(format);
     const session = createSession(html, { framework });
 
-    let transforms = session.transformForAllClients();
+    let transforms;
     if (clients) {
       const filter = clients.filter((c) => validClientIds.has(c));
       if (filter.length === 0) {
@@ -67,7 +68,9 @@ server.registerTool(
           JSON.stringify({ error: "No valid client IDs provided", validClientIds: Array.from(validClientIds) }, null, 2),
         );
       }
-      transforms = transforms.filter((t) => filter.includes(t.clientId));
+      transforms = filter.map((c) => session.transformForClient(c));
+    } else {
+      transforms = session.transformForAllClients();
     }
 
     const warnings = session.analyze();
@@ -366,7 +369,7 @@ server.registerTool(
               category: c.category,
               engine: c.engine,
               darkModeSupport: c.darkModeSupport,
-              ...("deprecated" in c && c.deprecated ? { deprecated: c.deprecated } : {}),
+              ...(c.deprecated ? { deprecated: c.deprecated } : {}),
             })),
             null,
             2,
@@ -478,12 +481,22 @@ server.registerTool(
   },
   async ({ domain }) => {
     try {
-      const report = await checkDeliverability(domain);
+      if (!_checkDeliverability) {
+        const mod = await import("@emailens/engine/server");
+        _checkDeliverability = mod.checkDeliverability;
+      }
+      const report = await _checkDeliverability!(domain);
       return {
         content: [{ type: "text" as const, text: JSON.stringify(report, null, 2) }],
       };
     } catch (err) {
-      return mcpError(`Deliverability check failed for "${domain}": ${(err as Error).message}`);
+      const msg = (err as Error).message ?? String(err);
+      if (msg.includes("Cannot find") || msg.includes("cannot find") || msg.includes("MODULE_NOT_FOUND")) {
+        return mcpError(
+          "check_deliverability requires @emailens/engine >=0.9.1 with the /server subpath. Update with: npm install @emailens/engine@latest",
+        );
+      }
+      return mcpError(`Deliverability check failed for "${domain}": ${msg}`);
     }
   },
 );

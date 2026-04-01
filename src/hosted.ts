@@ -24,7 +24,7 @@ export async function apiRequest<T = unknown>(
 
   try {
     const response = await fetch(url, {
-      method: body ? "POST" : method,
+      method: method !== "GET" ? method : body ? "POST" : "GET",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
