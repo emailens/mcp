@@ -1,0 +1,35 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "name": "io.github.emailens/mcp",
+  "title": "Emailens MCP",
+  "description": "Email compatibility analysis across 15 clients — preview, audit, fix, diff, deliverability.",
+  "version": "0.4.0",
+  "repository": {
+    "url": "https://github.com/emailens/mcp",
+    "source": "git",
+    "id": "emailens/mcp"
+  },
+  "websiteUrl": "https://emailens.dev/mcp",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@emailens/mcp",
+      "version": "0.4.0",
+      "transport": "stdio",
+      "runtimeHint": "npx",
+      "environmentVariables": [
+        {
+          "name": "EMAILENS_API_KEY",
+          "required": false,
+          "secret": true
+        }
+      ]
+    }
+  ],
+  "remotes": [
+    {
+      "url": "https://emailens.dev/api/mcp",
+      "transport": "streamable-http"
+    }
+  ]
+}
