@@ -11,6 +11,7 @@ import {
   diffResults,
   toPlainText,
   EMAIL_CLIENTS,
+  MAX_HTML_SIZE,
   type Framework,
   type CSSWarning,
 } from "@emailens/engine";
@@ -25,6 +26,13 @@ function toFramework(format?: string): Framework | undefined {
 }
 
 const formatEnum = z.enum(["html", "jsx", "mjml", "maizzle"]).optional();
+
+function validateHtmlSize(html: string) {
+  if (html.length > MAX_HTML_SIZE) {
+    return mcpError(`HTML input exceeds ${Math.round(MAX_HTML_SIZE / 1024)}KB limit. Reduce the email size and try again.`);
+  }
+  return null;
+}
 
 const server = new McpServer({
   name: "emailens",
@@ -56,6 +64,9 @@ server.registerTool(
     },
   },
   async ({ html, clients, format }) => {
+    const sizeError = validateHtmlSize(html);
+    if (sizeError) return sizeError;
+
     const validClientIds = new Set(EMAIL_CLIENTS.map((c) => c.id));
     const framework = toFramework(format);
     const session = createSession(html, { framework });
@@ -147,6 +158,9 @@ server.registerTool(
     },
   },
   async ({ html, format }) => {
+    const sizeError = validateHtmlSize(html);
+    if (sizeError) return sizeError;
+
     const warnings = analyzeEmail(html, toFramework(format));
     const scores = generateCompatibilityScore(warnings);
 
@@ -209,6 +223,9 @@ server.registerTool(
     },
   },
   async ({ html, format, skip }) => {
+    const sizeError = validateHtmlSize(html);
+    if (sizeError) return sizeError;
+
     const session = createSession(html, { framework: toFramework(format) });
     const report = session.audit({ skip });
 
@@ -278,6 +295,9 @@ server.registerTool(
     },
   },
   async ({ html, format, scope, selectedClientId }) => {
+    const sizeError = validateHtmlSize(html);
+    if (sizeError) return sizeError;
+
     const framework = toFramework(format);
     const fixScope = scope === "current" ? "current" : "all";
     const inputFormat = format || "html";
@@ -402,6 +422,11 @@ server.registerTool(
     },
   },
   async ({ before, after, format }) => {
+    const beforeSizeError = validateHtmlSize(before);
+    if (beforeSizeError) return beforeSizeError;
+    const afterSizeError = validateHtmlSize(after);
+    if (afterSizeError) return afterSizeError;
+
     const framework = toFramework(format);
 
     const beforeWarnings = analyzeEmail(before, framework);
@@ -469,7 +494,11 @@ server.registerTool(
     description:
       "Check email deliverability for a domain — SPF, DKIM, DMARC, MX, and BIMI records. Returns a score (0-100) and actionable issues. Uses DNS lookups (no API key needed).",
     inputSchema: {
-      domain: z.string().describe("Domain to check (e.g. 'company.com')"),
+      domain: z
+        .string()
+        .min(3)
+        .regex(/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i, "Invalid domain format")
+        .describe("Domain to check (e.g. 'company.com')"),
     },
     annotations: {
       title: "Check Deliverability",
