@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.1
+
+### Added
+
+- **Remote server endpoint** — Available at `https://emailens.dev/api/mcp`. No install needed — point your MCP client to the URL with an API key. All 7 analysis tools run server-side.
+- **MCP prompts** — 3 built-in prompts (`analyze-email`, `fix-email`, `check-domain`) for guided workflows.
+- **Public tools** — `list_clients` and `check_deliverability` work without an API key (IP rate-limited at 30/min). Other tools still require auth.
+- **Official MCP Registry** — Published as `io.github.emailens/mcp`. Also listed on Smithery, mcp.so, glama.ai, and mcpservers.org.
+- **`mcpName` field** — Added to `package.json` for registry compliance.
+
+### Fixed
+
+- Tool discovery (initialize, tools/list) now works without authentication so directory scanners and MCP clients can read the tool catalog before connecting with a key.
+
 ## 0.4.0
 
 ### Breaking Changes

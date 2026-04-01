@@ -1,8 +1,13 @@
 # @emailens/mcp
 
+[![npm](https://img.shields.io/npm/v/@emailens/mcp)](https://www.npmjs.com/package/@emailens/mcp)
+[![license](https://img.shields.io/npm/l/@emailens/mcp)](./LICENSE)
+[![MCP Registry](https://img.shields.io/badge/MCP-Registry-blue)](https://registry.modelcontextprotocol.io)
+[![Smithery](https://smithery.ai/badge/@emailens/emailens-mcp)](https://smithery.ai/server/emailens/emailens-mcp)
+
 MCP server for email compatibility analysis. Analyze, preview, diff, and fix HTML emails across 15 email clients — plus capture real screenshots and create shareable links with an optional API key.
 
-Built on [`@emailens/engine`](https://github.com/emailens/engine).
+Built on [`@emailens/engine`](https://github.com/emailens/engine). Also available as a [GitHub Action](https://github.com/marketplace/actions/emailens-email-preview-check).
 
 ## Install
 
@@ -50,6 +55,23 @@ claude mcp add emailens -- npx -y @emailens/mcp
 ```
 
 Get your free API key at [emailens.dev/settings/api-keys](https://emailens.dev/settings/api-keys).
+
+### Remote (no install)
+
+Use the hosted endpoint — no npm or Node.js needed. API key required.
+
+```json
+{
+  "mcpServers": {
+    "emailens": {
+      "url": "https://emailens.dev/api/mcp",
+      "headers": {
+        "Authorization": "Bearer ek_live_..."
+      }
+    }
+  }
+}
+```
 
 ## Tools
 
