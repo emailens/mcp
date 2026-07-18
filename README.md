@@ -1,11 +1,23 @@
-# @emailens/mcp
+<div align="center">
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./docs/wordmark-dark.svg">
+  <img src="./docs/wordmark-light.svg" alt="emailens / mcp" width="444">
+</picture>
+
+**Email rendering analysis for AI assistants**
 
 [![npm](https://img.shields.io/npm/v/@emailens/mcp)](https://www.npmjs.com/package/@emailens/mcp)
 [![license](https://img.shields.io/npm/l/@emailens/mcp)](./LICENSE)
 [![MCP Registry](https://img.shields.io/badge/MCP-Registry-blue)](https://registry.modelcontextprotocol.io)
 [![Smithery](https://smithery.ai/badge/@emailens/emailens-mcp)](https://smithery.ai/server/emailens/emailens-mcp)
+[![GitHub stars](https://img.shields.io/github/stars/emailens/mcp?style=flat)](https://github.com/emailens/mcp/stargazers)
+
+</div>
 
 MCP server for email compatibility analysis. Analyze, preview, diff, and fix HTML emails across 15 email clients — plus capture real screenshots and create shareable links with an optional API key.
+
+Why your assistant needs this: across the 251 CSS and HTML features we track, only 6 are fully supported in every major email client ([see the data](https://emailens.dev/email-css/report)). Ask Claude to check your email before you send it.
 
 Built on [`@emailens/engine`](https://github.com/emailens/engine). Also available as a [GitHub Action](https://github.com/marketplace/actions/emailens-email-preview-check).
 
@@ -199,3 +211,7 @@ bun run typecheck
 ## License
 
 MIT
+
+---
+
+If this saved you from an Outlook surprise, [a star](https://github.com/emailens/mcp) helps other email developers find it.
