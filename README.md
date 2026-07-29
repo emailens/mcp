@@ -17,7 +17,7 @@
 
 MCP server for email compatibility analysis. Analyze, preview, diff, and fix HTML emails across 21 email clients — plus capture real screenshots and create shareable links with an optional API key.
 
-Why your assistant needs this: across the 251 CSS and HTML features we track, only 6 are fully supported in every major email client ([see the data](https://emailens.dev/email-css/report)). Ask Claude to check your email before you send it.
+Why your assistant needs this: across the 255 CSS and HTML features we track, only 6 are fully supported in every major email client ([see the data](https://emailens.dev/email-css/report)). Ask Claude to check your email before you send it.
 
 Built on [`@emailens/engine`](https://github.com/emailens/engine). Also available as a [GitHub Action](https://github.com/marketplace/actions/emailens-email-preview-check).
 
@@ -110,7 +110,7 @@ Quick CSS compatibility analysis — returns per-client scores and warnings. Fas
 
 #### `audit_email`
 
-Comprehensive quality audit — CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), and template variables.
+Comprehensive quality audit — CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), template variables, content overflow, and visual bugs.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
@@ -131,7 +131,7 @@ Generate a structured fix prompt for compatibility issues. Returns markdown with
 
 #### `list_clients`
 
-List all 15 supported email clients with IDs, names, engines, and dark mode support.
+List all 21 supported email clients with IDs, names, engines, and dark mode support.
 
 #### `diff_emails`
 
@@ -155,7 +155,7 @@ Check email deliverability for a domain — SPF, DKIM, DMARC, MX, BIMI records w
 
 #### `capture_screenshots`
 
-Capture real email screenshots across 15 clients in real browsers. Screenshots are hosted on CDN.
+Capture real email screenshots across 21 clients in real browsers. Screenshots are hosted on CDN.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
@@ -179,7 +179,7 @@ Create a shareable link. Recipients see the full analysis without an account.
 
 Requires Dev plan ($9/mo). Share links expire after 7 days (Dev) or never (Pro).
 
-## Supported Email Clients (15)
+## Supported Email Clients (21)
 
 | Client | ID | Dark Mode | Notes |
 |---|---|---|---|
@@ -191,12 +191,18 @@ Requires Dev plan ($9/mo). Share links expire after 7 days (Dev) or never (Pro).
 | Outlook Windows Legacy | `outlook-windows-legacy` | No | Deprecated Oct 2026 |
 | Outlook iOS | `outlook-ios` | Yes | New in v0.4.0 |
 | Outlook Android | `outlook-android` | Yes | New in v0.4.0 |
+| Outlook for Mac | `outlook-macos` | Yes | New in v0.10.0 |
 | Apple Mail | `apple-mail-macos` | Yes | |
 | Apple Mail iOS | `apple-mail-ios` | Yes | |
 | Yahoo Mail | `yahoo-mail` | Yes | |
+| Yahoo Mail Android | `yahoo-mail-android` | Yes | New in v0.10.0 |
+| Yahoo Mail iOS | `yahoo-mail-ios` | Yes | New in v0.10.0 |
 | Samsung Mail | `samsung-mail` | Yes | |
 | Thunderbird | `thunderbird` | No | |
 | HEY Mail | `hey-mail` | Yes | |
+| Proton Mail | `protonmail` | Yes | New in v0.10.0 |
+| AOL Mail | `aol` | Yes | New in v0.10.0 |
+| Fastmail | `fastmail` | Yes | New in v0.10.0 |
 | Superhuman | `superhuman` | Yes | |
 
 ## Development

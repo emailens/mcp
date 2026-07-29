@@ -539,7 +539,7 @@ server.registerTool(
   {
     title: "Capture Screenshots",
     description:
-      "Capture real email screenshots across 15 clients (Gmail, Outlook, Apple Mail, etc.) with light and dark mode variants. Screenshots are rendered in real browsers and hosted on CDN. Requires EMAILENS_API_KEY env var \u2014 free plan at emailens.dev?ref=mcp.",
+      "Capture real email screenshots across 21 clients (Gmail, Outlook, Apple Mail, etc.) with light and dark mode variants. Screenshots are rendered in real browsers and hosted on CDN. Requires EMAILENS_API_KEY env var \u2014 free plan at emailens.dev?ref=mcp.",
     inputSchema: {
       html: z.string().describe("The email HTML source code"),
       format: formatEnum.describe("Input format"),
