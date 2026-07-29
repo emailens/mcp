@@ -46,7 +46,7 @@ server.registerTool(
   {
     title: "Preview Email",
     description:
-      "Full email compatibility preview — transforms HTML for 15 email clients (Gmail, Outlook, Apple Mail, Yahoo, Samsung, Thunderbird, HEY, Superhuman), analyzes CSS, generates scores, simulates dark mode, checks inbox preview and email size.",
+      `Full email compatibility preview — transforms HTML for ${EMAIL_CLIENTS.length} email clients (Gmail, Outlook, Apple Mail, Yahoo, Samsung, Thunderbird, HEY, Proton Mail, AOL, Fastmail, Superhuman), analyzes CSS, generates scores, simulates dark mode, checks inbox preview and email size.`,
     inputSchema: {
       html: z.string().describe("The email HTML source code"),
       clients: z
@@ -262,6 +262,8 @@ server.registerTool(
               inboxPreview: report.inboxPreview,
               size: report.size,
               templateVariables: report.templateVariables,
+              overflow: report.overflow,
+              visual: report.visual,
             },
             null,
             2,

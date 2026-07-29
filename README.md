@@ -15,7 +15,7 @@
 
 </div>
 
-MCP server for email compatibility analysis. Analyze, preview, diff, and fix HTML emails across 15 email clients — plus capture real screenshots and create shareable links with an optional API key.
+MCP server for email compatibility analysis. Analyze, preview, diff, and fix HTML emails across 21 email clients — plus capture real screenshots and create shareable links with an optional API key.
 
 Why your assistant needs this: across the 251 CSS and HTML features we track, only 6 are fully supported in every major email client ([see the data](https://emailens.dev/email-css/report)). Ask Claude to check your email before you send it.
 
@@ -91,7 +91,7 @@ Use the hosted endpoint — no npm or Node.js needed. API key required.
 
 #### `preview_email`
 
-Full email compatibility preview — transforms HTML for 15 clients, analyzes CSS, generates scores, simulates dark mode, checks inbox preview and email size.
+Full email compatibility preview — transforms HTML for 21 clients, analyzes CSS, generates scores, simulates dark mode, checks inbox preview and email size.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
