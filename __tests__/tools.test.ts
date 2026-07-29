@@ -178,11 +178,11 @@ describe("preview_email", () => {
 });
 
 describe("list_clients", () => {
-  test("returns 15 clients with required fields", async () => {
+  test("returns 21 clients with required fields", async () => {
     const result = await callTool("list_clients", {});
     const clients = parseToolJson(result) as Array<Record<string, unknown>>;
 
-    expect(clients.length).toBe(15);
+    expect(clients.length).toBe(21);
     for (const c of clients) {
       expect(c).toHaveProperty("id");
       expect(c).toHaveProperty("name");

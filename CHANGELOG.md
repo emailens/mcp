@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.0
+
+### Enhancements
+
+- **Engine upgrade to v0.10.0** — 21 email clients (added Outlook for Mac, Yahoo Mail Android/iOS, Proton Mail, AOL, Fastmail) and 255 tracked CSS/HTML features with value-aware, note-driven partial-support warnings.
+- **`audit_email`** — Now includes content overflow and visual bug sections. New `skip` values: `overflow`, `visual`.
+- **`preview_email`** — Result now surfaces content overflow and visual bug findings.
+- **`fix_email`** — Fix prompts now incorporate overflow and visual issues so AI fixes cover layout and rendering, not just CSS compatibility.
+
 ## 0.4.1
 
 ### Added
