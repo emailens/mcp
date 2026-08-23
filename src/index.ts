@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { collapseWarnings, forClients, knownClientIds } from "./findings.js";
+import { toHtml } from "./compile.js";
 import {
   createSession,
   analyzeEmail,
@@ -27,6 +28,12 @@ function toFramework(format?: string): Framework | undefined {
   return undefined;
 }
 
+/**
+ * The language the source is written in.
+ *
+ * Anything but `html` is compiled before analysis and also selects the syntax
+ * the fix snippets are written in.
+ */
 const formatEnum = z.enum(["html", "jsx", "mjml", "maizzle"]).optional();
 
 /**
@@ -141,7 +148,7 @@ function validateHtmlSize(html: string) {
 
 const server = new McpServer({
   name: "emailens",
-  version: "0.4.0",
+  version: "0.7.0",
 });
 
 // ── Local Tool: preview_email ──────────────────────────────────────
@@ -153,12 +160,12 @@ server.registerTool(
     description:
       `Full email compatibility preview — transforms HTML for ${EMAIL_CLIENTS.length} email clients (Gmail, Outlook, Apple Mail, Yahoo, Samsung, Thunderbird, HEY, Proton Mail, AOL, Fastmail, Superhuman), analyzes CSS, generates scores, simulates dark mode, checks inbox preview and email size.`,
     inputSchema: {
-      html: z.string().describe("The email HTML source code"),
+      html: z.string().describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so"),
       clients: z
         .array(z.string())
         .optional()
         .describe("Optional client ID filter (e.g. ['gmail-web', 'outlook-windows'])"),
-      format: formatEnum.describe("Input format: 'html' (default), 'jsx', 'mjml', or 'maizzle'"),
+      format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle'. Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets."),
     },
     annotations: {
       title: "Preview Email",
@@ -172,9 +179,12 @@ server.registerTool(
     const sizeError = validateHtmlSize(html);
     if (sizeError) return sizeError;
 
+    const source = await toHtml(html, format);
+    if (!source.ok) return mcpError(source.message);
+
     const validClientIds = new Set(EMAIL_CLIENTS.map((c) => c.id));
     const framework = toFramework(format);
-    const session = createSession(html, { framework });
+    const session = createSession(source.html, { framework });
 
     let transforms;
     if (clients) {
@@ -251,8 +261,8 @@ server.registerTool(
     description:
       "Quick CSS compatibility analysis — returns per-client scores and one finding per problem, listing the clients it affects. For HTML input each finding carries loc (line, column, offset) and alsoAtLines, so you can edit the exact source. Narrow with clients, or pass detail:'full' for the per-client breakdown with fix snippets. Use audit_email for a full quality report (spam, links, a11y, images, etc.).",
     inputSchema: {
-      html: z.string().describe("The email HTML source code"),
-      format: formatEnum.describe("Input format for framework-specific fix snippets"),
+      html: z.string().describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so"),
+      format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle'. Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets."),
       detail: detailEnum,
       clients: clientsParam,
     },
@@ -270,7 +280,10 @@ server.registerTool(
     const clientError = validateClients(clients);
     if (clientError) return clientError;
 
-    const warnings = analyzeEmail(html, toFramework(format), {
+    const source = await toHtml(html, format);
+    if (!source.ok) return mcpError(source.message);
+
+    const warnings = analyzeEmail(source.html, toFramework(format), {
       positions: positionsApply(format),
     });
     // Scores stay whole-email: filtering to two clients should narrow what is
@@ -311,8 +324,8 @@ server.registerTool(
     description:
       "Comprehensive email quality audit — CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), and template variables. For HTML input, findings tied to a specific element carry loc (line, column, offset) so you can edit the exact source. Compatibility is collapsed to one finding per problem listing the clients it affects; pass detail:'full' for the per-client breakdown with fix snippets. Use skip to omit checks and clients to narrow which clients are reported.",
     inputSchema: {
-      html: z.string().describe("The email HTML source code"),
-      format: formatEnum.describe("Input format for framework-specific fix snippets"),
+      html: z.string().describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so"),
+      format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle'. Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets."),
       skip: z
         .array(z.enum(["spam", "links", "accessibility", "images", "compatibility", "inboxPreview", "size", "templateVariables"]))
         .optional()
@@ -334,7 +347,10 @@ server.registerTool(
     const clientError = validateClients(clients);
     if (clientError) return clientError;
 
-    const session = createSession(html, {
+    const source = await toHtml(html, format);
+    if (!source.ok) return mcpError(source.message);
+
+    const session = createSession(source.html, {
       framework: toFramework(format),
       positions: positionsApply(format),
     });
@@ -385,8 +401,8 @@ server.registerTool(
     description:
       "Generate a structured fix prompt for email compatibility issues. Returns markdown with the original code, detected issues (CSS or structural), fix snippets, and format-specific instructions. Use after preview_email or analyze_email.",
     inputSchema: {
-      html: z.string().describe("The email HTML source code to fix"),
-      format: formatEnum.describe("Input format — controls fix syntax"),
+      html: z.string().describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so — the source to fix"),
+      format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle'. Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets."),
       scope: z.enum(["all", "current"]).optional().describe("'all' (default) or 'current' (requires selectedClientId)"),
       selectedClientId: z.string().optional().describe("Client ID to scope fixes to (e.g. 'outlook-windows')"),
     },
@@ -402,11 +418,18 @@ server.registerTool(
     const sizeError = validateHtmlSize(html);
     if (sizeError) return sizeError;
 
+    // The findings come from the compiled output, because that is what a
+    // client renders. The prompt keeps the caller's own source, because that is
+    // the file they will edit — a fix written against generated HTML is not a
+    // fix they can apply.
+    const source = await toHtml(html, format);
+    if (!source.ok) return mcpError(source.message);
+
     const framework = toFramework(format);
     const fixScope = scope === "current" ? "current" : "all";
     const inputFormat = format || "html";
 
-    const warnings = analyzeEmail(html, framework);
+    const warnings = analyzeEmail(source.html, framework);
     const scores = generateCompatibilityScore(warnings);
 
     if (warnings.length === 0) {
@@ -513,9 +536,9 @@ server.registerTool(
     description:
       "Compare two email HTML versions — shows score changes, fixed issues, and newly introduced issues per client. Use after making fixes to verify improvements.",
     inputSchema: {
-      before: z.string().describe("Original email HTML"),
-      after: z.string().describe("Modified email HTML"),
-      format: formatEnum.describe("Input format for framework-specific analysis"),
+      before: z.string().describe("Original email source"),
+      after: z.string().describe("Modified email source, in the same format"),
+      format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle'. Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets."),
     },
     annotations: {
       title: "Diff Emails",
@@ -531,12 +554,17 @@ server.registerTool(
     const afterSizeError = validateHtmlSize(after);
     if (afterSizeError) return afterSizeError;
 
+    const beforeSource = await toHtml(before, format);
+    if (!beforeSource.ok) return mcpError(beforeSource.message);
+    const afterSource = await toHtml(after, format);
+    if (!afterSource.ok) return mcpError(afterSource.message);
+
     const framework = toFramework(format);
 
-    const beforeWarnings = analyzeEmail(before, framework);
+    const beforeWarnings = analyzeEmail(beforeSource.html, framework);
     const beforeScores = generateCompatibilityScore(beforeWarnings);
 
-    const afterWarnings = analyzeEmail(after, framework);
+    const afterWarnings = analyzeEmail(afterSource.html, framework);
     const afterScores = generateCompatibilityScore(afterWarnings);
 
     const results = diffResults(
@@ -643,7 +671,7 @@ server.registerTool(
     description:
       "Capture real email screenshots across 21 clients (Gmail, Outlook, Apple Mail, etc.) with light and dark mode variants. Screenshots are rendered in real browsers and hosted on CDN. Requires EMAILENS_API_KEY env var \u2014 free plan at emailens.dev?ref=mcp.",
     inputSchema: {
-      html: z.string().describe("The email HTML source code"),
+      html: z.string().describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so"),
       format: formatEnum.describe("Input format"),
       clients: z.array(z.string()).optional().describe("Filter to specific client IDs"),
       modes: z
@@ -757,7 +785,7 @@ server.registerTool(
     description:
       "Create a shareable link for an email preview. Recipients see the full analysis without needing an account. Requires EMAILENS_API_KEY env var and Dev plan ($9/mo).",
     inputSchema: {
-      html: z.string().describe("The email HTML source code"),
+      html: z.string().describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so"),
       title: z.string().optional().describe("Display title for the share page"),
       format: formatEnum.describe("Input format"),
     },
