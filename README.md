@@ -101,12 +101,47 @@ Full email compatibility preview — transforms HTML for 21 clients, analyzes CS
 
 #### `analyze_email`
 
-Quick CSS compatibility analysis — returns per-client scores and warnings. Faster than `audit_email` when you only need CSS compatibility.
+Quick CSS compatibility analysis — returns per-client scores and one finding per problem. Faster than `audit_email` when you only need CSS compatibility.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `html` | string | Yes | Email HTML source |
 | `format` | enum | No | Input format |
+| `detail` | enum | No | `"summary"` (default) or `"full"` |
+| `clients` | string[] | No | Only report these client IDs |
+
+**One finding per problem, not one per client.** The engine reports per client
+because a score is per client, and per selector because a fix is per selector.
+On an ordinary newsletter `border-radius` arrives twelve times — two clients
+that drop it, six selectors that use it — with the same sentence in every copy.
+That was 286KB of JSON, about 73,000 tokens, for an 11KB email.
+
+Findings group by property, severity and message, listing the clients affected,
+with positions merged across all of them. The same email now returns 40KB.
+
+```json
+{
+  "property": "border-radius",
+  "severity": "warning",
+  "clients": ["outlook-windows", "outlook-windows-legacy"],
+  "message": "Does not support \"border-radius\". Round corners can be used in VML…",
+  "fixType": "structural",
+  "hasFix": true,
+  "loc": { "line": 61, "column": 28, "offset": 2753, "length": 171 },
+  "alsoAtLines": [62, 64, 75, 78, 87]
+}
+```
+
+Fix snippets are not included — they were 93KB of that 286KB, and `fix_email`
+produces them for the issues you decide to act on. `hasFix` tells you one is
+available; `fixType` tells you whether the repair is markup or CSS.
+
+Pass `detail: "full"` for the engine's per-client shape with snippets, and
+`clients: ["gmail-web", "outlook-windows"]` to report only what you care about
+— the fastest further saving, roughly halving the response for two clients.
+Scores stay whole-email either way: narrowing the report does not change what
+the email is worth elsewhere. An unknown client ID is rejected by name — an
+empty result would read as "this email is fine for that client".
 
 **Source positions.** For HTML input, every warning carries `loc` — `line`,
 `column`, `offset`, `length` — for the first occurrence, plus `alsoAtLines` for
@@ -139,6 +174,8 @@ Comprehensive quality audit — CSS compatibility, spam scoring, link validation
 |---|---|---|---|
 | `html` | string | Yes | Email HTML source |
 | `format` | enum | No | Input format |
+| `detail` | enum | No | `"summary"` (default) or `"full"` |
+| `clients` | string[] | No | Only report these client IDs |
 | `skip` | string[] | No | Checks to skip (e.g. `["spam", "images"]`) |
 
 #### `fix_email`

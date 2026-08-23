@@ -105,7 +105,8 @@ describe("analyze_email", () => {
     expect(data).toHaveProperty("overallScore");
     expect(data).toHaveProperty("scores");
     expect(data).toHaveProperty("warningCount");
-    expect(data).toHaveProperty("warnings");
+    expect(data).toHaveProperty("findingCount");
+    expect(data).toHaveProperty("findings");
 
     // BREAKING CHANGE: these must NOT be present
     expect(data).not.toHaveProperty("spam");
@@ -265,60 +266,92 @@ describe("source positions", () => {
     /* 9 */ "</body></html>",
   ].join("\n");
 
-  /** The border-radius warnings, keyed by the line they resolve to. */
-  function radiusByLine(warnings: Array<{ property: string; loc?: { line: number } }>) {
-    return new Map(
-      warnings.filter((w) => w.property === "border-radius" && w.loc).map((w) => [w.loc!.line, w]),
-    );
+  interface Finding {
+    property: string;
+    clients: string[];
+    loc?: { line: number; column: number; offset: number; length: number };
+    alsoAtLines?: number[];
   }
 
-  test("analyze_email locates each warning in the HTML it was given", async () => {
-    const result = await callTool("analyze_email", { html: POSITIONED });
-    const data = parseToolJson(result) as {
-      warnings: Array<{ property: string; loc?: { line: number; offset: number; length: number } }>;
-    };
+  async function findings(args: Record<string, unknown> = {}): Promise<Finding[]> {
+    const result = await callTool("analyze_email", { html: POSITIONED, ...args });
+    return (parseToolJson(result) as { findings: Finding[] }).findings;
+  }
 
-    // The same property breaks in two different ways here: once in the <style>
-    // block, once inline. Each resolves to its own source text.
-    const byLine = radiusByLine(data.warnings);
-    const fromBlock = byLine.get(3)!;
-    const fromInline = byLine.get(7)!;
-    expect(POSITIONED.slice(fromBlock.loc!.offset, fromBlock.loc!.offset + fromBlock.loc!.length)).toBe(
-      "border-radius: 8px",
-    );
-    expect(POSITIONED.slice(fromInline.loc!.offset, fromInline.loc!.offset + fromInline.loc!.length)).toBe(
-      'style="border-radius:4px"',
-    );
+  test("analyze_email locates the finding in the HTML it was given", async () => {
+    const radius = (await findings()).filter((f) => f.property === "border-radius" && f.loc);
+
+    // border-radius appears three times here — once in the <style> block and
+    // once in each <div> — and is dropped by the same clients for the same
+    // reason every time. That is one problem in three places, so it is one
+    // finding: `loc` on the first, the rest as lines.
+    expect(radius).toHaveLength(1);
+    const { loc, alsoAtLines } = radius[0];
+    expect(POSITIONED.slice(loc!.offset, loc!.offset + loc!.length)).toBe("border-radius: 8px");
+    expect(alsoAtLines).toEqual([7, 8]);
   });
 
-  test("an agent is told about the other places a property breaks", async () => {
-    const result = await callTool("analyze_email", { html: POSITIONED });
-    const data = parseToolJson(result) as {
-      warnings: Array<{ property: string; loc?: { line: number }; alsoAtLines?: number[] }>;
-    };
-
-    // Two <div>s share the inline warning — an agent fixing only `loc` would
-    // leave the second one broken. The rest are line numbers rather than full
-    // positions, to keep the response affordable to read.
-    const inline = radiusByLine(data.warnings).get(7) as { alsoAtLines?: number[] };
-    expect(inline.alsoAtLines).toEqual([8]);
+  test("an agent is told about every place a property breaks", async () => {
+    // An agent fixing only `loc` would leave the two <div>s broken.
+    const radius = (await findings()).find((f) => f.property === "border-radius")!;
+    expect(radius.alsoAtLines).toEqual([7, 8]);
+    expect(radius.clients.length).toBeGreaterThan(1);
   });
 
   test("positions stay compact — the response is read by a model", async () => {
-    const result = await callTool("analyze_email", { html: POSITIONED });
-    const data = parseToolJson(result) as { warnings: Array<{ loc?: Record<string, unknown> }> };
-    const located = data.warnings.find((w) => w.loc)!;
+    const located = (await findings()).find((f) => f.loc)!;
     expect(Object.keys(located.loc!).sort()).toEqual(["column", "length", "line", "offset"]);
+  });
+
+  test("detail:'full' still gives the per-client breakdown", async () => {
+    // The escape hatch. Nothing the collapsed shape leaves out is unreachable.
+    const result = await callTool("analyze_email", { html: POSITIONED, detail: "full" });
+    const data = parseToolJson(result) as {
+      warnings: Array<{ client: string; property: string; fix?: unknown }>;
+    };
+    const radius = data.warnings.filter((w) => w.property === "border-radius");
+    expect(radius.length).toBeGreaterThan(1);
+    expect(new Set(radius.map((w) => w.client)).size).toBeGreaterThan(1);
+    expect(radius.some((w) => w.fix)).toBe(true);
+  });
+
+  test("an unknown client id is rejected, not silently filtered to nothing", async () => {
+    // The most misleading thing the tool can do with a typo is return an empty
+    // list, which reads as "this email is fine for that client".
+    const result = await callTool("analyze_email", {
+      html: POSITIONED,
+      clients: ["outlook-2019", "gmail-web"],
+    });
+    expect(result.isError).toBe(true);
+    const text = result.content.map((c) => c.text).join(" ");
+    expect(text).toContain("outlook-2019");
+    expect(text).not.toContain("gmail-web");
+    expect(text).toContain("list_clients");
+  });
+
+  test("clients narrows what is reported without changing the scores", async () => {
+    const result = await callTool("analyze_email", {
+      html: POSITIONED,
+      clients: ["outlook-windows"],
+    });
+    const data = parseToolJson(result) as {
+      scores: Record<string, unknown>;
+      findings: Finding[];
+    };
+    for (const f of data.findings) expect(f.clients).toEqual(["outlook-windows"]);
+    // Scores stay whole-email: asking about one client narrows the report, it
+    // does not change what the email is worth everywhere else.
+    expect(Object.keys(data.scores).length).toBeGreaterThan(1);
   });
 
   test("audit_email positions findings from every analyzer that has them", async () => {
     const result = await callTool("audit_email", { html: POSITIONED });
     const data = parseToolJson(result) as {
-      compatibility: { warnings: Array<{ loc?: unknown }> };
+      compatibility: { findings: Array<{ loc?: unknown }> };
       links: { issues: Array<{ rule: string; loc?: { line: number } }> };
     };
 
-    expect(data.compatibility.warnings.some((w) => w.loc)).toBe(true);
+    expect(data.compatibility.findings.some((f) => f.loc)).toBe(true);
     const insecure = data.links.issues.find((i) => i.rule === "insecure-link");
     expect(insecure?.loc?.line).toBe(6);
   });
@@ -332,7 +365,7 @@ describe("source positions", () => {
       format: "mjml",
     });
     if (result.isError) return; // mjml peer dep not installed in this environment
-    const data = parseToolJson(result) as { warnings: Array<{ loc?: unknown }> };
-    expect(data.warnings.every((w) => !w.loc)).toBe(true);
+    const data = parseToolJson(result) as { findings: Array<{ loc?: unknown }> };
+    expect(data.findings.every((f) => !f.loc)).toBe(true);
   });
 });
