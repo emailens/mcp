@@ -293,6 +293,13 @@ HTML with `format: "html"` — the tools say so when they hit this.
 | Fastmail | `fastmail` | Yes | New in v0.10.0 |
 | Superhuman | `superhuman` | Yes | |
 
+## Releasing
+
+Two publishes: npm, and the MCP registry. The registry listing sat five
+releases behind because nothing pushed `server.json`, so that half is a
+workflow now. [RELEASING.md](./RELEASING.md) has the details and the four
+places the version has to agree.
+
 ## Development
 
 ```bash

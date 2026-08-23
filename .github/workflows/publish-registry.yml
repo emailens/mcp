@@ -1,0 +1,61 @@
+# Keeping the MCP registry listing from going stale.
+#
+# The registry entry sat at 0.4.1 through four npm releases, still telling
+# anyone who found the server that way that it covered 15 email clients. There
+# were 21. `server.json` in this repo was correct the whole time — nothing had
+# ever pushed it.
+#
+# So the push is a workflow rather than a step in someone's head. It runs on a
+# published GitHub release, and on demand for a release that predates it.
+#
+# npm publishing stays manual on purpose: this needs no secrets at all. The
+# registry accepts GitHub OIDC for an `io.github.*` namespace, so there is no
+# token to store, rotate, or leak.
+
+name: Publish to MCP Registry
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  publish:
+    name: server.json to registry.modelcontextprotocol.io
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The registry only accepts a version that exists on npm, and it checks
+      # that the published package's `mcpName` matches the name in server.json.
+      # Failing here is cheaper than a rejected publish.
+      - name: Check the version is on npm
+        run: |
+          version=$(node -p "require('./server.json').packages[0].version")
+          name=$(node -p "require('./server.json').packages[0].identifier")
+          echo "server.json wants $name@$version"
+          published=$(npm view "$name@$version" version 2>/dev/null || true)
+          if [ "$published" != "$version" ]; then
+            echo "::error::$name@$version is not on npm. Publish it first."
+            exit 1
+          fi
+          mcp_name=$(npm view "$name@$version" mcpName 2>/dev/null || true)
+          expected=$(node -p "require('./server.json').name")
+          if [ "$mcp_name" != "$expected" ]; then
+            echo "::error::published mcpName is '$mcp_name', server.json says '$expected'"
+            exit 1
+          fi
+
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      - name: Authenticate
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish
+        run: ./mcp-publisher publish
