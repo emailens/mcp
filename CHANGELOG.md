@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.7.0 — 2026-08-23
+## 0.6.2 — 2026-08-23
 
 ### Fixed
 
@@ -15,6 +15,8 @@
 - **`format`, `html`, `before` and `after` describe themselves accurately.** The schema said "the email HTML source code" for parameters that accept four languages, and `format` was described as picking fix syntax. Both now say the source is compiled.
 
 - **The server reports its real version.** It had announced `0.4.0` since that release.
+
+A patch rather than a minor, on the grounds that a tool answering "no problems" to a template it never read was not output worth preserving. HTML callers — which is nearly all of them — see no change at all. The one honest argument the other way: a call passing `format: "mjml"` on a machine without `mjml` installed now returns an error where it used to return an empty report. That is a call that stops "working", but it was never working.
 
 ## 0.6.1 — 2026-08-23
 
