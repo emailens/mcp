@@ -193,13 +193,19 @@ describe("list_clients", () => {
     }
   });
 
-  test("includes deprecated field for outlook-windows-legacy", async () => {
+  test("passes the engine's deprecation date through rather than its own", async () => {
+    // This asserted "2026-10" until Microsoft moved Outlook Classic's
+    // end-of-support date and the engine's data followed. A date owned
+    // upstream does not belong in an assertion here; what this tool owes its
+    // caller is the engine's answer, unaltered.
     const result = await callTool("list_clients", {});
     const clients = parseToolJson(result) as Array<Record<string, unknown>>;
 
     const legacy = clients.find((c) => c.id === "outlook-windows-legacy");
+    const source = EMAIL_CLIENTS.find((c) => c.id === "outlook-windows-legacy");
     expect(legacy).toBeDefined();
-    expect(legacy!.deprecated).toBe("2026-10");
+    expect(source?.deprecated).toEqual(expect.any(String));
+    expect(legacy!.deprecated).toBe(source!.deprecated);
   });
 
   test("includes new Outlook iOS and Android clients", async () => {

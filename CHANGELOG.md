@@ -10,6 +10,8 @@
 
 - **`list_clients` advertised 15 clients.** Its tool description still said "List all 15 supported email clients" — the number an assistant reads before deciding whether to call it. There have been 21 since 0.10.0, and the description no longer names a count.
 
+- **A test asserted Outlook Classic's end-of-support date.** It hardcoded `2026-10`; Microsoft moved the date, the engine's data followed, and the test failed on a fact it does not own. It now asserts what the tool actually owes its caller — the engine's answer, unaltered.
+
 - **Two tests asserted 15 email clients.** The engine has shipped 21 since 0.10.0; they passed only against the lockfile's pinned 0.9.2. They now derive the count from `EMAIL_CLIENTS`.
 
 ## 0.5.0
