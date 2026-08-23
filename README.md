@@ -108,6 +108,24 @@ Quick CSS compatibility analysis — returns per-client scores and warnings. Fas
 | `html` | string | Yes | Email HTML source |
 | `format` | enum | No | Input format |
 
+**Source positions.** For HTML input, every warning carries `loc` — `line`,
+`column`, `endLine`, `endColumn`, `offset`, `length` — plus `locs`, every place
+that property breaks in document order, so an assistant can edit each one rather
+than only the first. `audit_email` positions its other findings the same way.
+
+```json
+{
+  "property": "border-radius",
+  "loc":  { "line": 7, "column": 8, "offset": 142, "length": 25 },
+  "locs": [{ "line": 7, ... }, { "line": 8, ... }]
+}
+```
+
+Positions are reported for `html` input only. JSX, MJML and Maizzle are compiled
+before analysis, so a line number would point into generated output rather than
+the file you have open — the tools omit it instead of returning one that looks
+authoritative.
+
 #### `audit_email`
 
 Comprehensive quality audit — CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), template variables, content overflow, and visual bugs.

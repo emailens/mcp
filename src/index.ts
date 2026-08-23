@@ -27,6 +27,26 @@ function toFramework(format?: string): Framework | undefined {
 
 const formatEnum = z.enum(["html", "jsx", "mjml", "maizzle"]).optional();
 
+/**
+ * Do source positions refer to the code the caller handed us?
+ *
+ * Only for plain HTML. JSX, MJML and Maizzle are compiled before analysis, so a
+ * position would point into generated output — worse than none, because an
+ * agent would edit the wrong line with confidence.
+ */
+function positionsApply(format?: string): boolean {
+  return (format ?? "html") === "html";
+}
+
+/** The position fields a finding carries, when it has them. */
+function withPositions<T extends { loc?: unknown; locs?: unknown; locsTruncated?: boolean }>(w: T) {
+  return {
+    ...(w.loc ? { loc: w.loc } : {}),
+    ...(w.locs ? { locs: w.locs } : {}),
+    ...(w.locsTruncated ? { locsTruncated: true } : {}),
+  };
+}
+
 function validateHtmlSize(html: string) {
   if (html.length > MAX_HTML_SIZE) {
     return mcpError(`HTML input exceeds ${Math.round(MAX_HTML_SIZE / 1024)}KB limit. Reduce the email size and try again.`);
@@ -144,7 +164,7 @@ server.registerTool(
   {
     title: "Analyze Email",
     description:
-      "Quick CSS compatibility analysis — returns warnings and per-client scores. Use audit_email for full quality report (spam, links, a11y, images, etc.).",
+      "Quick CSS compatibility analysis — returns warnings and per-client scores. For HTML input each warning carries loc (line, column, offset) and locs (every place the property breaks), so you can edit the exact source. Use audit_email for full quality report (spam, links, a11y, images, etc.).",
     inputSchema: {
       html: z.string().describe("The email HTML source code"),
       format: formatEnum.describe("Input format for framework-specific fix snippets"),
@@ -161,7 +181,9 @@ server.registerTool(
     const sizeError = validateHtmlSize(html);
     if (sizeError) return sizeError;
 
-    const warnings = analyzeEmail(html, toFramework(format));
+    const warnings = analyzeEmail(html, toFramework(format), {
+      positions: positionsApply(format),
+    });
     const scores = generateCompatibilityScore(warnings);
 
     const scoreValues = Object.values(scores);
@@ -187,6 +209,7 @@ server.registerTool(
                 suggestion: w.suggestion,
                 fix: w.fix,
                 fixType: w.fixType,
+                ...withPositions(w),
               })),
             },
             null,
@@ -205,7 +228,7 @@ server.registerTool(
   {
     title: "Audit Email",
     description:
-      "Comprehensive email quality audit — CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), and template variables. Use skip to omit specific checks.",
+      "Comprehensive email quality audit — CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), and template variables. For HTML input, findings tied to a specific element carry loc (line, column, offset) so you can edit the exact source. Use skip to omit specific checks.",
     inputSchema: {
       html: z.string().describe("The email HTML source code"),
       format: formatEnum.describe("Input format for framework-specific fix snippets"),
@@ -226,7 +249,10 @@ server.registerTool(
     const sizeError = validateHtmlSize(html);
     if (sizeError) return sizeError;
 
-    const session = createSession(html, { framework: toFramework(format) });
+    const session = createSession(html, {
+      framework: toFramework(format),
+      positions: positionsApply(format),
+    });
     const report = session.audit({ skip });
 
     const scoreValues = Object.values(report.compatibility.scores);
@@ -253,6 +279,7 @@ server.registerTool(
                   suggestion: w.suggestion,
                   fix: w.fix,
                   fixType: w.fixType,
+                  ...withPositions(w),
                 })),
               },
               spam: report.spam,

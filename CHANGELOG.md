@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Source positions in `analyze_email` and `audit_email`.** For HTML input every finding tied to a specific place carries `loc` (line, column, offset, length) and, where one problem occurs in several places, `locs` — so an assistant can edit the exact source rather than describe it, and can fix every occurrence instead of the first. Positions are requested for `html` only: JSX, MJML and Maizzle are compiled before analysis, so a line number would refer to generated output the caller never wrote. Requires `@emailens/engine` 0.11.0.
+
+### Fixed
+
+- **Two tests asserted 15 email clients.** The engine has shipped 21 since 0.10.0; they passed only against the lockfile's pinned 0.9.2. They now derive the count from `EMAIL_CLIENTS`.
+
 ## 0.5.0
 
 ### Enhancements

@@ -1,3 +1,4 @@
+import { EMAIL_CLIENTS } from "@emailens/engine";
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
 import type { Subprocess } from "bun";
 
@@ -219,7 +220,7 @@ describe("diff_emails", () => {
     expect(data.summary.clientsImproved).toBeGreaterThan(0);
     expect(data.summary.clientsRegressed).toBe(0);
     expect(data.summary.avgScoreDelta).toBeGreaterThan(0);
-    expect(data.results.length).toBe(15);
+    expect(data.results.length).toBe(EMAIL_CLIENTS.length);
   });
 });
 
@@ -242,5 +243,82 @@ describe("share_preview", () => {
     expect(result.content[0].text).toContain("requires an Emailens API key");
     expect(result.content[0].text).toContain("Dev plan");
     expect(result.content[0].text).toContain("ref=mcp");
+  });
+});
+
+describe("source positions", () => {
+  const POSITIONED = [
+    /* 1 */ '<html lang="en">',
+    /* 2 */ "<head><style>",
+    /* 3 */ "  .card { border-radius: 8px; }",
+    /* 4 */ "</style></head>",
+    /* 5 */ "<body>",
+    /* 6 */ '  <a href="http://example.com">go</a>',
+    /* 7 */ '  <div style="border-radius:4px">a</div>',
+    /* 8 */ '  <div style="border-radius:4px">b</div>',
+    /* 9 */ "</body></html>",
+  ].join("\n");
+
+  /** The border-radius warnings, keyed by the line they resolve to. */
+  function radiusByLine(warnings: Array<{ property: string; loc?: { line: number } }>) {
+    return new Map(
+      warnings.filter((w) => w.property === "border-radius" && w.loc).map((w) => [w.loc!.line, w]),
+    );
+  }
+
+  test("analyze_email locates each warning in the HTML it was given", async () => {
+    const result = await callTool("analyze_email", { html: POSITIONED });
+    const data = parseToolJson(result) as {
+      warnings: Array<{ property: string; loc?: { line: number; offset: number; length: number } }>;
+    };
+
+    // The same property breaks in two different ways here: once in the <style>
+    // block, once inline. Each resolves to its own source text.
+    const byLine = radiusByLine(data.warnings);
+    const fromBlock = byLine.get(3)!;
+    const fromInline = byLine.get(7)!;
+    expect(POSITIONED.slice(fromBlock.loc!.offset, fromBlock.loc!.offset + fromBlock.loc!.length)).toBe(
+      "border-radius: 8px",
+    );
+    expect(POSITIONED.slice(fromInline.loc!.offset, fromInline.loc!.offset + fromInline.loc!.length)).toBe(
+      'style="border-radius:4px"',
+    );
+  });
+
+  test("an agent gets every place a property breaks, not just the first", async () => {
+    const result = await callTool("analyze_email", { html: POSITIONED });
+    const data = parseToolJson(result) as {
+      warnings: Array<{ property: string; loc?: { line: number }; locs?: Array<{ line: number }> }>;
+    };
+
+    // Two <div>s share the inline warning — an agent fixing only `loc` would
+    // leave the second one broken.
+    const inline = radiusByLine(data.warnings).get(7) as { locs?: Array<{ line: number }> };
+    expect(inline.locs?.map((l) => l.line)).toEqual([7, 8]);
+  });
+
+  test("audit_email positions findings from every analyzer that has them", async () => {
+    const result = await callTool("audit_email", { html: POSITIONED });
+    const data = parseToolJson(result) as {
+      compatibility: { warnings: Array<{ loc?: unknown }> };
+      links: { issues: Array<{ rule: string; loc?: { line: number } }> };
+    };
+
+    expect(data.compatibility.warnings.some((w) => w.loc)).toBe(true);
+    const insecure = data.links.issues.find((i) => i.rule === "insecure-link");
+    expect(insecure?.loc?.line).toBe(6);
+  });
+
+  test("compiled input gets no positions — they would point at generated HTML", async () => {
+    // MJML compiles before analysis, so any line number would refer to output
+    // the caller never wrote. Better to return none than to mislead an agent
+    // into editing the wrong line.
+    const result = await callTool("analyze_email", {
+      html: "<mjml><mj-body><mj-section><mj-column><mj-text>hi</mj-text></mj-column></mj-section></mj-body></mjml>",
+      format: "mjml",
+    });
+    if (result.isError) return; // mjml peer dep not installed in this environment
+    const data = parseToolJson(result) as { warnings: Array<{ loc?: unknown }> };
+    expect(data.warnings.every((w) => !w.loc)).toBe(true);
   });
 });
