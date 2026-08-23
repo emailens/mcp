@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { analyzeEmail, auditEmail, EMAIL_CLIENTS, type CSSWarning } from "@emailens/engine";
 import { collapseWarnings, forClients, knownClientIds } from "../src/findings";
 
@@ -10,7 +11,10 @@ import { collapseWarnings, forClients, knownClientIds } from "../src/findings";
  * turn and all of them pay for.
  */
 
-const FIXTURE = "/home/user/engine/src/__tests__/fixtures/cerberus-newsletter.html";
+// Vendored rather than reached for in a sibling checkout. It was an absolute
+// path into one machine's home directory, so the whole file threw ENOENT
+// anywhere else — including on CI, the first time there was any.
+const FIXTURE = join(import.meta.dir, "fixtures", "cerberus-newsletter.html");
 const html = readFileSync(FIXTURE, "utf8");
 const warnings = analyzeEmail(html, undefined, { positions: true });
 
