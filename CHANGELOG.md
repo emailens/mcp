@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.1 — 2026-08-23
+
+### Changed
+
+- **A `loc` now points at the declaration, not the whole `style="…"` attribute.** An assistant editing by position gets the characters to change rather than the attribute containing them. Comes from `@emailens/engine` 0.10.3, and the dependency is pinned there because that is what the suite runs against — 0.6.0's `^0.10.2` already resolved to it for anyone installing after the engine's release.
+
 ## 0.6.0 — 2026-08-23
 
 ### Changed
