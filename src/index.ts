@@ -14,6 +14,7 @@ import {
   MAX_HTML_SIZE,
   type Framework,
   type CSSWarning,
+  type SourceLocation,
 } from "@emailens/engine";
 // Lazy-imported: @emailens/engine/server may not exist in all engine versions
 let _checkDeliverability: ((domain: string) => Promise<unknown>) | null = null;
@@ -38,11 +39,26 @@ function positionsApply(format?: string): boolean {
   return (format ?? "html") === "html";
 }
 
-/** The position fields a finding carries, when it has them. */
-function withPositions<T extends { loc?: unknown; locs?: unknown; locsTruncated?: boolean }>(w: T) {
+/**
+ * The position fields a finding carries, when it has them.
+ *
+ * Deliberately compact: this response is read by a model paying for every
+ * token, and a newsletter can produce a thousand occurrences. The first one
+ * gets a full position — enough to edit it — and the rest are reduced to line
+ * numbers, which is all an assistant needs to go find them. Carrying every
+ * occurrence in full nearly doubled the payload on a real fixture.
+ */
+function withPositions<T extends {
+  loc?: SourceLocation;
+  locs?: SourceLocation[];
+  locsTruncated?: boolean;
+}>(w: T) {
+  if (!w.loc) return {};
+  const { line, column, offset, length } = w.loc;
+  const others = (w.locs ?? []).slice(1).map((l) => l.line);
   return {
-    ...(w.loc ? { loc: w.loc } : {}),
-    ...(w.locs ? { locs: w.locs } : {}),
+    loc: { line, column, offset, length },
+    ...(others.length ? { alsoAtLines: others } : {}),
     ...(w.locsTruncated ? { locsTruncated: true } : {}),
   };
 }

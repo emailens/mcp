@@ -109,17 +109,22 @@ Quick CSS compatibility analysis — returns per-client scores and warnings. Fas
 | `format` | enum | No | Input format |
 
 **Source positions.** For HTML input, every warning carries `loc` — `line`,
-`column`, `endLine`, `endColumn`, `offset`, `length` — plus `locs`, every place
-that property breaks in document order, so an assistant can edit each one rather
-than only the first. `audit_email` positions its other findings the same way.
+`column`, `offset`, `length` — for the first occurrence, plus `alsoAtLines` for
+any others, so an assistant can edit the exact source and knows where the rest
+are. `audit_email` positions its other findings the same way.
 
 ```json
 {
   "property": "border-radius",
-  "loc":  { "line": 7, "column": 8, "offset": 142, "length": 25 },
-  "locs": [{ "line": 7, ... }, { "line": 8, ... }]
+  "loc": { "line": 7, "column": 8, "offset": 142, "length": 25 },
+  "alsoAtLines": [12, 19]
 }
 ```
+
+Later occurrences are line numbers rather than full positions on purpose: this
+response is read by a model paying for every token, and a real newsletter can
+produce over a thousand occurrences — carrying them all in full nearly doubles
+the payload.
 
 Positions are reported for `html` input only. JSX, MJML and Maizzle are compiled
 before analysis, so a line number would point into generated output rather than

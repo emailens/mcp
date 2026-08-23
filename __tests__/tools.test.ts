@@ -285,16 +285,24 @@ describe("source positions", () => {
     );
   });
 
-  test("an agent gets every place a property breaks, not just the first", async () => {
+  test("an agent is told about the other places a property breaks", async () => {
     const result = await callTool("analyze_email", { html: POSITIONED });
     const data = parseToolJson(result) as {
-      warnings: Array<{ property: string; loc?: { line: number }; locs?: Array<{ line: number }> }>;
+      warnings: Array<{ property: string; loc?: { line: number }; alsoAtLines?: number[] }>;
     };
 
     // Two <div>s share the inline warning — an agent fixing only `loc` would
-    // leave the second one broken.
-    const inline = radiusByLine(data.warnings).get(7) as { locs?: Array<{ line: number }> };
-    expect(inline.locs?.map((l) => l.line)).toEqual([7, 8]);
+    // leave the second one broken. The rest are line numbers rather than full
+    // positions, to keep the response affordable to read.
+    const inline = radiusByLine(data.warnings).get(7) as { alsoAtLines?: number[] };
+    expect(inline.alsoAtLines).toEqual([8]);
+  });
+
+  test("positions stay compact — the response is read by a model", async () => {
+    const result = await callTool("analyze_email", { html: POSITIONED });
+    const data = parseToolJson(result) as { warnings: Array<{ loc?: Record<string, unknown> }> };
+    const located = data.warnings.find((w) => w.loc)!;
+    expect(Object.keys(located.loc!).sort()).toEqual(["column", "length", "line", "offset"]);
   });
 
   test("audit_email positions findings from every analyzer that has them", async () => {
