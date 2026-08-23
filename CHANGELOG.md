@@ -4,7 +4,7 @@
 
 ### Added
 
-- **Source positions in `analyze_email` and `audit_email`.** For HTML input every finding tied to a specific place carries `loc` (line, column, offset, length) and, where one problem occurs in several places, `locs` — so an assistant can edit the exact source rather than describe it, and can fix every occurrence instead of the first. Positions are requested for `html` only: JSX, MJML and Maizzle are compiled before analysis, so a line number would refer to generated output the caller never wrote. Requires `@emailens/engine` 0.11.0.
+- **Source positions in `analyze_email` and `audit_email`.** For HTML input every finding tied to a specific place carries `loc` (line, column, offset, length) and, where one problem occurs in several places, `locs` — so an assistant can edit the exact source rather than describe it, and can fix every occurrence instead of the first. Positions are requested for `html` only: JSX, MJML and Maizzle are compiled before analysis, so a line number would refer to generated output the caller never wrote. Requires `@emailens/engine` 0.10.2.
 
 ### Fixed
 
