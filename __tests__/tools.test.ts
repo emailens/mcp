@@ -1,3 +1,4 @@
+import { EMAIL_CLIENTS } from "@emailens/engine";
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
 import type { Subprocess } from "bun";
 
@@ -192,13 +193,19 @@ describe("list_clients", () => {
     }
   });
 
-  test("includes deprecated field for outlook-windows-legacy", async () => {
+  test("passes the engine's deprecation date through rather than its own", async () => {
+    // This asserted "2026-10" until Microsoft moved Outlook Classic's
+    // end-of-support date and the engine's data followed. A date owned
+    // upstream does not belong in an assertion here; what this tool owes its
+    // caller is the engine's answer, unaltered.
     const result = await callTool("list_clients", {});
     const clients = parseToolJson(result) as Array<Record<string, unknown>>;
 
     const legacy = clients.find((c) => c.id === "outlook-windows-legacy");
+    const source = EMAIL_CLIENTS.find((c) => c.id === "outlook-windows-legacy");
     expect(legacy).toBeDefined();
-    expect(legacy!.deprecated).toBe("2026-10");
+    expect(source?.deprecated).toEqual(expect.any(String));
+    expect(legacy!.deprecated).toBe(source!.deprecated);
   });
 
   test("includes new Outlook iOS and Android clients", async () => {
@@ -219,7 +226,7 @@ describe("diff_emails", () => {
     expect(data.summary.clientsImproved).toBeGreaterThan(0);
     expect(data.summary.clientsRegressed).toBe(0);
     expect(data.summary.avgScoreDelta).toBeGreaterThan(0);
-    expect(data.results.length).toBe(15);
+    expect(data.results.length).toBe(EMAIL_CLIENTS.length);
   });
 });
 
@@ -242,5 +249,90 @@ describe("share_preview", () => {
     expect(result.content[0].text).toContain("requires an Emailens API key");
     expect(result.content[0].text).toContain("Dev plan");
     expect(result.content[0].text).toContain("ref=mcp");
+  });
+});
+
+describe("source positions", () => {
+  const POSITIONED = [
+    /* 1 */ '<html lang="en">',
+    /* 2 */ "<head><style>",
+    /* 3 */ "  .card { border-radius: 8px; }",
+    /* 4 */ "</style></head>",
+    /* 5 */ "<body>",
+    /* 6 */ '  <a href="http://example.com">go</a>',
+    /* 7 */ '  <div style="border-radius:4px">a</div>',
+    /* 8 */ '  <div style="border-radius:4px">b</div>',
+    /* 9 */ "</body></html>",
+  ].join("\n");
+
+  /** The border-radius warnings, keyed by the line they resolve to. */
+  function radiusByLine(warnings: Array<{ property: string; loc?: { line: number } }>) {
+    return new Map(
+      warnings.filter((w) => w.property === "border-radius" && w.loc).map((w) => [w.loc!.line, w]),
+    );
+  }
+
+  test("analyze_email locates each warning in the HTML it was given", async () => {
+    const result = await callTool("analyze_email", { html: POSITIONED });
+    const data = parseToolJson(result) as {
+      warnings: Array<{ property: string; loc?: { line: number; offset: number; length: number } }>;
+    };
+
+    // The same property breaks in two different ways here: once in the <style>
+    // block, once inline. Each resolves to its own source text.
+    const byLine = radiusByLine(data.warnings);
+    const fromBlock = byLine.get(3)!;
+    const fromInline = byLine.get(7)!;
+    expect(POSITIONED.slice(fromBlock.loc!.offset, fromBlock.loc!.offset + fromBlock.loc!.length)).toBe(
+      "border-radius: 8px",
+    );
+    expect(POSITIONED.slice(fromInline.loc!.offset, fromInline.loc!.offset + fromInline.loc!.length)).toBe(
+      'style="border-radius:4px"',
+    );
+  });
+
+  test("an agent is told about the other places a property breaks", async () => {
+    const result = await callTool("analyze_email", { html: POSITIONED });
+    const data = parseToolJson(result) as {
+      warnings: Array<{ property: string; loc?: { line: number }; alsoAtLines?: number[] }>;
+    };
+
+    // Two <div>s share the inline warning — an agent fixing only `loc` would
+    // leave the second one broken. The rest are line numbers rather than full
+    // positions, to keep the response affordable to read.
+    const inline = radiusByLine(data.warnings).get(7) as { alsoAtLines?: number[] };
+    expect(inline.alsoAtLines).toEqual([8]);
+  });
+
+  test("positions stay compact — the response is read by a model", async () => {
+    const result = await callTool("analyze_email", { html: POSITIONED });
+    const data = parseToolJson(result) as { warnings: Array<{ loc?: Record<string, unknown> }> };
+    const located = data.warnings.find((w) => w.loc)!;
+    expect(Object.keys(located.loc!).sort()).toEqual(["column", "length", "line", "offset"]);
+  });
+
+  test("audit_email positions findings from every analyzer that has them", async () => {
+    const result = await callTool("audit_email", { html: POSITIONED });
+    const data = parseToolJson(result) as {
+      compatibility: { warnings: Array<{ loc?: unknown }> };
+      links: { issues: Array<{ rule: string; loc?: { line: number } }> };
+    };
+
+    expect(data.compatibility.warnings.some((w) => w.loc)).toBe(true);
+    const insecure = data.links.issues.find((i) => i.rule === "insecure-link");
+    expect(insecure?.loc?.line).toBe(6);
+  });
+
+  test("compiled input gets no positions — they would point at generated HTML", async () => {
+    // MJML compiles before analysis, so any line number would refer to output
+    // the caller never wrote. Better to return none than to mislead an agent
+    // into editing the wrong line.
+    const result = await callTool("analyze_email", {
+      html: "<mjml><mj-body><mj-section><mj-column><mj-text>hi</mj-text></mj-column></mj-section></mj-body></mjml>",
+      format: "mjml",
+    });
+    if (result.isError) return; // mjml peer dep not installed in this environment
+    const data = parseToolJson(result) as { warnings: Array<{ loc?: unknown }> };
+    expect(data.warnings.every((w) => !w.loc)).toBe(true);
   });
 });

@@ -14,6 +14,7 @@ import {
   MAX_HTML_SIZE,
   type Framework,
   type CSSWarning,
+  type SourceLocation,
 } from "@emailens/engine";
 // Lazy-imported: @emailens/engine/server may not exist in all engine versions
 let _checkDeliverability: ((domain: string) => Promise<unknown>) | null = null;
@@ -26,6 +27,41 @@ function toFramework(format?: string): Framework | undefined {
 }
 
 const formatEnum = z.enum(["html", "jsx", "mjml", "maizzle"]).optional();
+
+/**
+ * Do source positions refer to the code the caller handed us?
+ *
+ * Only for plain HTML. JSX, MJML and Maizzle are compiled before analysis, so a
+ * position would point into generated output — worse than none, because an
+ * agent would edit the wrong line with confidence.
+ */
+function positionsApply(format?: string): boolean {
+  return (format ?? "html") === "html";
+}
+
+/**
+ * The position fields a finding carries, when it has them.
+ *
+ * Deliberately compact: this response is read by a model paying for every
+ * token, and a newsletter can produce a thousand occurrences. The first one
+ * gets a full position — enough to edit it — and the rest are reduced to line
+ * numbers, which is all an assistant needs to go find them. Carrying every
+ * occurrence in full nearly doubled the payload on a real fixture.
+ */
+function withPositions<T extends {
+  loc?: SourceLocation;
+  locs?: SourceLocation[];
+  locsTruncated?: boolean;
+}>(w: T) {
+  if (!w.loc) return {};
+  const { line, column, offset, length } = w.loc;
+  const others = (w.locs ?? []).slice(1).map((l) => l.line);
+  return {
+    loc: { line, column, offset, length },
+    ...(others.length ? { alsoAtLines: others } : {}),
+    ...(w.locsTruncated ? { locsTruncated: true } : {}),
+  };
+}
 
 function validateHtmlSize(html: string) {
   if (html.length > MAX_HTML_SIZE) {
@@ -144,7 +180,7 @@ server.registerTool(
   {
     title: "Analyze Email",
     description:
-      "Quick CSS compatibility analysis — returns warnings and per-client scores. Use audit_email for full quality report (spam, links, a11y, images, etc.).",
+      "Quick CSS compatibility analysis — returns warnings and per-client scores. For HTML input each warning carries loc (line, column, offset) and locs (every place the property breaks), so you can edit the exact source. Use audit_email for full quality report (spam, links, a11y, images, etc.).",
     inputSchema: {
       html: z.string().describe("The email HTML source code"),
       format: formatEnum.describe("Input format for framework-specific fix snippets"),
@@ -161,7 +197,9 @@ server.registerTool(
     const sizeError = validateHtmlSize(html);
     if (sizeError) return sizeError;
 
-    const warnings = analyzeEmail(html, toFramework(format));
+    const warnings = analyzeEmail(html, toFramework(format), {
+      positions: positionsApply(format),
+    });
     const scores = generateCompatibilityScore(warnings);
 
     const scoreValues = Object.values(scores);
@@ -187,6 +225,7 @@ server.registerTool(
                 suggestion: w.suggestion,
                 fix: w.fix,
                 fixType: w.fixType,
+                ...withPositions(w),
               })),
             },
             null,
@@ -205,7 +244,7 @@ server.registerTool(
   {
     title: "Audit Email",
     description:
-      "Comprehensive email quality audit — CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), and template variables. Use skip to omit specific checks.",
+      "Comprehensive email quality audit — CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), and template variables. For HTML input, findings tied to a specific element carry loc (line, column, offset) so you can edit the exact source. Use skip to omit specific checks.",
     inputSchema: {
       html: z.string().describe("The email HTML source code"),
       format: formatEnum.describe("Input format for framework-specific fix snippets"),
@@ -226,7 +265,10 @@ server.registerTool(
     const sizeError = validateHtmlSize(html);
     if (sizeError) return sizeError;
 
-    const session = createSession(html, { framework: toFramework(format) });
+    const session = createSession(html, {
+      framework: toFramework(format),
+      positions: positionsApply(format),
+    });
     const report = session.audit({ skip });
 
     const scoreValues = Object.values(report.compatibility.scores);
@@ -253,6 +295,7 @@ server.registerTool(
                   suggestion: w.suggestion,
                   fix: w.fix,
                   fixType: w.fixType,
+                  ...withPositions(w),
                 })),
               },
               spam: report.spam,
@@ -370,7 +413,7 @@ server.registerTool(
   "list_clients",
   {
     title: "List Email Clients",
-    description: "List all 15 supported email clients with IDs, names, engines, and dark mode support.",
+    description: "List every supported email client with IDs, names, engines, and dark mode support.",
     annotations: {
       title: "List Email Clients",
       readOnlyHint: true,

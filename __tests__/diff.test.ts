@@ -1,5 +1,6 @@
 import { describe, test, expect } from "bun:test";
 import {
+  EMAIL_CLIENTS,
   analyzeEmail,
   generateCompatibilityScore,
   diffResults,
@@ -36,7 +37,7 @@ describe("diff_emails summary computation", () => {
     expect(clientsImproved).toBeGreaterThan(0);
     expect(clientsRegressed).toBe(0);
     expect(avgScoreDelta).toBeGreaterThan(0);
-    expect(results.length).toBe(15);
+    expect(results.length).toBe(EMAIL_CLIENTS.length);
   });
 
   test("diff shows regression when introducing issues", () => {
