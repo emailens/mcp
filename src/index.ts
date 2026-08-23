@@ -413,7 +413,7 @@ server.registerTool(
   "list_clients",
   {
     title: "List Email Clients",
-    description: "List all 15 supported email clients with IDs, names, engines, and dark mode support.",
+    description: "List every supported email client with IDs, names, engines, and dark mode support.",
     annotations: {
       title: "List Email Clients",
       readOnlyHint: true,
