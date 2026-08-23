@@ -15,7 +15,9 @@
 
 </div>
 
-MCP server for email compatibility analysis. Analyze, preview, diff, and fix HTML emails across 21 email clients — plus capture real screenshots and create shareable links with an optional API key.
+MCP server for email compatibility analysis. Analyze, preview, diff, and fix emails across 21 email clients — plus capture real screenshots and create shareable links with an optional API key.
+
+Send **HTML, MJML, Maizzle or React Email**. Set `format` and the template is compiled before analysis, so what gets checked is the HTML your readers actually receive.
 
 Why your assistant needs this: across the 255 CSS and HTML features we track, only 6 are fully supported in every major email client ([see the data](https://emailens.dev/email-css/report)). Ask Claude to check your email before you send it.
 
@@ -238,6 +240,31 @@ Create a shareable link. Recipients see the full analysis without an account.
 | `format` | enum | No | Input format |
 
 Requires Dev plan ($9/mo). Share links expire after 7 days (Dev) or never (Pro).
+
+## Template formats
+
+`format` accepts `html` (the default), `mjml`, `maizzle` and `jsx` (React
+Email). Anything but `html` is compiled before analysis and also decides the
+syntax the fix snippets come back in.
+
+Compiling matters more than it sounds. An email client renders the *output*, so
+that is what has to be checked: handed a raw `<mjml>` document, an HTML parser
+finds no CSS in it and reports a perfectly clean email. An answer like that is
+worse than an error, because an assistant will repeat it.
+
+**The compilers are not bundled.** MJML alone pulls 56MB, and this server is
+usually started with `npx`, so the engine keeps them as optional peer
+dependencies:
+
+```bash
+npm install mjml                                              # MJML
+npm install @maizzle/framework                                # Maizzle
+npm install sucrase react @react-email/components @react-email/render  # React Email
+```
+
+They have to be installed where the server runs, which is not always somewhere
+you control. If it is not, compile the template yourself and send the resulting
+HTML with `format: "html"` — the tools say so when they hit this.
 
 ## Supported Email Clients (21)
 

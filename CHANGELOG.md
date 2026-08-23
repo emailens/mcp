@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.7.0 — 2026-08-23
+
+### Fixed
+
+- **MJML, Maizzle and React Email sources are now compiled before analysis. They were not, and the tools answered "no problems".** `format` chose the syntax of the fix snippets and nothing else; the source itself went to the analyzer untouched. An HTML parser reads `<mjml><mj-section>…` without complaint, finds no CSS in it, and every tool returned **zero findings** — which an assistant relays as a clean bill of health. A confident wrong answer is worse than an error, and this one was documented as working.
+
+  `preview_email`, `analyze_email`, `audit_email`, `diff_emails` and `fix_email` now compile first, with the same compilers `@emailens/cli` uses. `fix_email` compiles for the analysis but keeps your source in the prompt: a fix written against generated HTML is not one you can apply.
+
+  The compilers stay optional peer dependencies of the engine — MJML alone is 56MB and this server usually starts under `npx`. A format whose compiler is missing now says which package to install, and offers the way out that needs nothing installed: compile it yourself and send the HTML with `format: "html"`. What it never does again is answer as though the email were fine.
+
+### Changed
+
+- **`format`, `html`, `before` and `after` describe themselves accurately.** The schema said "the email HTML source code" for parameters that accept four languages, and `format` was described as picking fix syntax. Both now say the source is compiled.
+
+- **The server reports its real version.** It had announced `0.4.0` since that release.
+
 ## 0.6.1 — 2026-08-23
 
 ### Changed
