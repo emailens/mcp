@@ -49,13 +49,15 @@ describe("the version, in every place it is written", () => {
     // It advertised 15 clients through four releases while the engine had 21,
     // and named none of the template languages.
     const { description } = server;
-    expect(description).not.toContain("15 clients");
-    expect(description).toContain("21 clients");
+    expect(description).not.toMatch(/\b15 (email )?clients\b/);
+    expect(description).toMatch(/\b21 (email )?clients\b/);
     for (const framework of ["MJML", "Maizzle", "React Email"]) {
       expect([framework, description.includes(framework)]).toEqual([framework, true]);
     }
-    // The registry caps this at 100 characters of summary in some clients, but
-    // the hard limit is what the schema allows.
-    expect(description.length).toBeLessThanOrEqual(500);
+    // 100 characters, hard. The registry rejects the publish with a 422 over
+    // it, which is how this was found: a 139-character description passed
+    // OIDC login and then bounced off validation. Guessing the limit was
+    // generous is why the test did not catch it first.
+    expect(description.length).toBeLessThanOrEqual(100);
   });
 });

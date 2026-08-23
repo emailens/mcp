@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.emailens/mcp",
   "title": "Emailens MCP",
-  "description": "Email compatibility analysis across 21 clients, from HTML, MJML, Maizzle or React Email sources: preview, audit, fix, diff, deliverability.",
+  "description": "Analyze, audit, fix and diff HTML, MJML, Maizzle and React Email across 21 email clients.",
   "version": "0.6.2",
   "repository": {
     "url": "https://github.com/emailens/mcp",
