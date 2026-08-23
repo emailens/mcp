@@ -49,6 +49,14 @@ jobs:
             echo "::error::published mcpName is '$mcp_name', server.json says '$expected'"
             exit 1
           fi
+          # The registry caps the description at 100 characters and answers a
+          # 422 over it, after the login and the download. The first run of
+          # this workflow died there on a 139-character one.
+          length=$(node -p "require('./server.json').description.length")
+          if [ "$length" -gt 100 ]; then
+            echo "::error::description is $length characters, the registry allows 100"
+            exit 1
+          fi
 
       - name: Install mcp-publisher
         run: |
