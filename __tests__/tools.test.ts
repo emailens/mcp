@@ -315,6 +315,20 @@ describe("source positions", () => {
     expect(radius.some((w) => w.fix)).toBe(true);
   });
 
+  test("an unknown client id is rejected, not silently filtered to nothing", async () => {
+    // The most misleading thing the tool can do with a typo is return an empty
+    // list, which reads as "this email is fine for that client".
+    const result = await callTool("analyze_email", {
+      html: POSITIONED,
+      clients: ["outlook-2019", "gmail-web"],
+    });
+    expect(result.isError).toBe(true);
+    const text = result.content.map((c) => c.text).join(" ");
+    expect(text).toContain("outlook-2019");
+    expect(text).not.toContain("gmail-web");
+    expect(text).toContain("list_clients");
+  });
+
   test("clients narrows what is reported without changing the scores", async () => {
     const result = await callTool("analyze_email", {
       html: POSITIONED,

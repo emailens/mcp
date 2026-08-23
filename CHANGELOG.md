@@ -16,7 +16,7 @@
 
 - **`detail: "full"`** returns the engine's per-client shape with fix snippets, unchanged. Nothing the collapsed form leaves out is unreachable.
 
-- **`clients`** on both tools, to report only the clients you care about. The fastest further saving: two clients is 20KB rather than 40KB. Scores stay whole-email — asking about Outlook narrows the report, it does not change what the email is worth elsewhere.
+- **`clients`** on both tools, to report only the clients you care about. The fastest further saving: two clients is 20KB rather than 40KB. Scores stay whole-email — asking about Outlook narrows the report, it does not change what the email is worth elsewhere. An id the engine does not know is rejected by name, rather than filtered to an empty list that would read as "this email is fine for that client".
 
 ## 0.5.1 — 2026-08-23
 

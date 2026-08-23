@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { collapseWarnings, forClients } from "./findings.js";
+import { collapseWarnings, forClients, knownClientIds } from "./findings.js";
 import {
   createSession,
   analyzeEmail,
@@ -50,6 +50,22 @@ const clientsParam = z
   .describe(
     "Only report these client IDs (e.g. ['gmail-web','outlook-windows']). The fastest way to cut the response when you care about specific clients. Use list_clients for the IDs.",
   );
+
+/**
+ * Reject a client id the engine does not know.
+ *
+ * Filtering to a typo would return an empty list, which reads as "this email
+ * is fine for that client" — the most misleading answer the tool can give.
+ */
+function validateClients(clients: string[] | undefined) {
+  if (!clients?.length) return undefined;
+  const known = new Set(knownClientIds());
+  const unknown = clients.filter((c) => !known.has(c));
+  if (!unknown.length) return undefined;
+  return mcpError(
+    `Unknown client ${unknown.length > 1 ? "IDs" : "ID"}: ${unknown.join(", ")}. Call list_clients for the valid IDs.`,
+  );
+}
 
 /** The compatibility payload, at the requested level of detail. */
 function compatibilityPayload(
@@ -251,6 +267,8 @@ server.registerTool(
   async ({ html, format, detail, clients }) => {
     const sizeError = validateHtmlSize(html);
     if (sizeError) return sizeError;
+    const clientError = validateClients(clients);
+    if (clientError) return clientError;
 
     const warnings = analyzeEmail(html, toFramework(format), {
       positions: positionsApply(format),
@@ -313,6 +331,8 @@ server.registerTool(
   async ({ html, format, skip, detail, clients }) => {
     const sizeError = validateHtmlSize(html);
     if (sizeError) return sizeError;
+    const clientError = validateClients(clients);
+    if (clientError) return clientError;
 
     const session = createSession(html, {
       framework: toFramework(format),

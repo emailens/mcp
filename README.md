@@ -140,7 +140,8 @@ Pass `detail: "full"` for the engine's per-client shape with snippets, and
 `clients: ["gmail-web", "outlook-windows"]` to report only what you care about
 — the fastest further saving, roughly halving the response for two clients.
 Scores stay whole-email either way: narrowing the report does not change what
-the email is worth elsewhere.
+the email is worth elsewhere. An unknown client ID is rejected by name — an
+empty result would read as "this email is fine for that client".
 
 **Source positions.** For HTML input, every warning carries `loc` — `line`,
 `column`, `offset`, `length` — for the first occurrence, plus `alsoAtLines` for
