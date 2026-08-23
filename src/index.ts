@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { collapseWarnings, forClients } from "./findings.js";
 import {
   createSession,
   analyzeEmail,
@@ -27,6 +28,58 @@ function toFramework(format?: string): Framework | undefined {
 }
 
 const formatEnum = z.enum(["html", "jsx", "mjml", "maizzle"]).optional();
+
+/**
+ * How much compatibility detail to return.
+ *
+ * `summary` collapses the engine's per-client, per-selector warnings into one
+ * entry per problem listing the clients it affects — the same information at a
+ * fraction of the tokens. `full` is the engine's own shape, per client, with
+ * fix snippets, for a caller that wants everything.
+ */
+const detailEnum = z
+  .enum(["summary", "full"])
+  .optional()
+  .describe(
+    "'summary' (default) returns one entry per problem, listing the clients it affects — roughly 10x smaller. 'full' returns one entry per client with fix snippets.",
+  );
+
+const clientsParam = z
+  .array(z.string())
+  .optional()
+  .describe(
+    "Only report these client IDs (e.g. ['gmail-web','outlook-windows']). The fastest way to cut the response when you care about specific clients. Use list_clients for the IDs.",
+  );
+
+/** The compatibility payload, at the requested level of detail. */
+function compatibilityPayload(
+  warnings: CSSWarning[],
+  detail: "summary" | "full" | undefined,
+  clients: string[] | undefined,
+) {
+  const scoped = forClients(warnings, clients);
+  if (detail === "full") {
+    return {
+      warningCount: scoped.length,
+      warnings: scoped.map((w) => ({
+        client: w.client,
+        property: w.property,
+        severity: w.severity,
+        message: w.message,
+        suggestion: w.suggestion,
+        fix: w.fix,
+        fixType: w.fixType,
+        ...withPositions(w),
+      })),
+    };
+  }
+  const findings = collapseWarnings(scoped);
+  return {
+    warningCount: scoped.length,
+    findingCount: findings.length,
+    findings,
+  };
+}
 
 /**
  * Do source positions refer to the code the caller handed us?
@@ -180,10 +233,12 @@ server.registerTool(
   {
     title: "Analyze Email",
     description:
-      "Quick CSS compatibility analysis — returns warnings and per-client scores. For HTML input each warning carries loc (line, column, offset) and locs (every place the property breaks), so you can edit the exact source. Use audit_email for full quality report (spam, links, a11y, images, etc.).",
+      "Quick CSS compatibility analysis — returns per-client scores and one finding per problem, listing the clients it affects. For HTML input each finding carries loc (line, column, offset) and alsoAtLines, so you can edit the exact source. Narrow with clients, or pass detail:'full' for the per-client breakdown with fix snippets. Use audit_email for a full quality report (spam, links, a11y, images, etc.).",
     inputSchema: {
       html: z.string().describe("The email HTML source code"),
       format: formatEnum.describe("Input format for framework-specific fix snippets"),
+      detail: detailEnum,
+      clients: clientsParam,
     },
     annotations: {
       title: "Analyze Email",
@@ -193,13 +248,15 @@ server.registerTool(
       openWorldHint: false,
     },
   },
-  async ({ html, format }) => {
+  async ({ html, format, detail, clients }) => {
     const sizeError = validateHtmlSize(html);
     if (sizeError) return sizeError;
 
     const warnings = analyzeEmail(html, toFramework(format), {
       positions: positionsApply(format),
     });
+    // Scores stay whole-email: filtering to two clients should narrow what is
+    // reported, not silently change what the email scores.
     const scores = generateCompatibilityScore(warnings);
 
     const scoreValues = Object.values(scores);
@@ -216,17 +273,7 @@ server.registerTool(
             {
               overallScore,
               scores,
-              warningCount: warnings.length,
-              warnings: warnings.map((w) => ({
-                client: w.client,
-                property: w.property,
-                severity: w.severity,
-                message: w.message,
-                suggestion: w.suggestion,
-                fix: w.fix,
-                fixType: w.fixType,
-                ...withPositions(w),
-              })),
+              ...compatibilityPayload(warnings, detail, clients),
             },
             null,
             2,
@@ -244,7 +291,7 @@ server.registerTool(
   {
     title: "Audit Email",
     description:
-      "Comprehensive email quality audit — CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), and template variables. For HTML input, findings tied to a specific element carry loc (line, column, offset) so you can edit the exact source. Use skip to omit specific checks.",
+      "Comprehensive email quality audit — CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), and template variables. For HTML input, findings tied to a specific element carry loc (line, column, offset) so you can edit the exact source. Compatibility is collapsed to one finding per problem listing the clients it affects; pass detail:'full' for the per-client breakdown with fix snippets. Use skip to omit checks and clients to narrow which clients are reported.",
     inputSchema: {
       html: z.string().describe("The email HTML source code"),
       format: formatEnum.describe("Input format for framework-specific fix snippets"),
@@ -252,6 +299,8 @@ server.registerTool(
         .array(z.enum(["spam", "links", "accessibility", "images", "compatibility", "inboxPreview", "size", "templateVariables"]))
         .optional()
         .describe("Checks to skip (e.g. ['spam', 'images'])"),
+      detail: detailEnum,
+      clients: clientsParam,
     },
     annotations: {
       title: "Audit Email",
@@ -261,7 +310,7 @@ server.registerTool(
       openWorldHint: false,
     },
   },
-  async ({ html, format, skip }) => {
+  async ({ html, format, skip, detail, clients }) => {
     const sizeError = validateHtmlSize(html);
     if (sizeError) return sizeError;
 
@@ -286,17 +335,7 @@ server.registerTool(
               overallCompatibility,
               compatibility: {
                 scores: report.compatibility.scores,
-                warningCount: report.compatibility.warnings.length,
-                warnings: report.compatibility.warnings.map((w) => ({
-                  client: w.client,
-                  property: w.property,
-                  severity: w.severity,
-                  message: w.message,
-                  suggestion: w.suggestion,
-                  fix: w.fix,
-                  fixType: w.fixType,
-                  ...withPositions(w),
-                })),
+                ...compatibilityPayload(report.compatibility.warnings, detail, clients),
               },
               spam: report.spam,
               links: report.links,

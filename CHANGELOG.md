@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.6.0 — 2026-08-23
+
+### Changed
+
+- **`analyze_email` and `audit_email` return one finding per problem, not one per client — 86% smaller.** An ordinary 11KB newsletter produced **286KB of JSON, about 73,000 tokens**, and the audit 442KB. It is now 40KB and 62KB. A tool that cannot be called twice in a conversation gets called once and then avoided ([#3](https://github.com/emailens/mcp/issues/3)).
+
+  The engine reports per client because a score is per client, and per selector because a fix is per selector. On that fixture `border-radius` arrived twelve times — two clients that drop it, six selectors that use it — carrying the same sentence and the same VML workaround in every copy. Findings now group by property, severity and message, listing the clients affected, with positions merged across all of them. 347 warnings become 65 findings.
+
+  Three things make up the saving. The clients become a list instead of a reason to repeat the prose. The message loses the client's name, matched exactly against that client's own display name rather than by pattern, so it cannot eat a real word. And **`fix` snippets are gone** — 93KB of the original 286KB — replaced by `hasFix: true`, because `fix_email` exists to produce them for the issues a caller decides to act on. `fixType` stays: it is one word and it says whether the repair is markup or CSS.
+
+  Where a suggestion differs between the clients in a group it is dropped rather than guessed, so one client's advice is never printed against another. Where a message names its client mid-sentence — the dark-mode warnings say "…so Apple Mail may keep the email in light mode" — the findings stay separate, because merging them would attribute Apple Mail's sentence to Samsung.
+
+### Added
+
+- **`detail: "full"`** returns the engine's per-client shape with fix snippets, unchanged. Nothing the collapsed form leaves out is unreachable.
+
+- **`clients`** on both tools, to report only the clients you care about. The fastest further saving: two clients is 20KB rather than 40KB. Scores stay whole-email — asking about Outlook narrows the report, it does not change what the email is worth elsewhere.
+
 ## 0.5.1 — 2026-08-23
 
 ### Added
