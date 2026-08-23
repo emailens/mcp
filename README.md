@@ -7,6 +7,7 @@
 
 **Email rendering analysis for AI assistants**
 
+[![CI](https://github.com/emailens/mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/emailens/mcp/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@emailens/mcp)](https://www.npmjs.com/package/@emailens/mcp)
 [![license](https://img.shields.io/npm/l/@emailens/mcp)](./LICENSE)
 [![MCP Registry](https://img.shields.io/badge/MCP-Registry-blue)](https://registry.modelcontextprotocol.io)

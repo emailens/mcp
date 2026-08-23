@@ -1,0 +1,44 @@
+# The failure this exists for.
+#
+# A dependency range is not a pin. `@emailens/cli` 0.4.1 depended on
+# `^0.10.2`, the engine published 0.10.3, and four tests started failing for
+# everyone who installed after that release — while CI, had there been any,
+# would have stayed green on the committed lockfile forever. The tests were
+# asserting positions the engine had legitimately moved.
+#
+# So: once a week, resolve the engine the way a new installer would, and run
+# the suite against it. A failure here is not necessarily a bug in the engine.
+# It is this repository finding out that its published output has moved, which
+# is a thing to know before a user reports it.
+
+name: Latest engine
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    name: against @emailens/engine@latest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install
+
+      - name: Install the newest published engine
+        run: |
+          bun add @emailens/engine@latest
+          echo "engine: $(bun pm ls | grep '@emailens/engine' || true)"
+
+      - run: bun run typecheck
+
+      - run: bun test
