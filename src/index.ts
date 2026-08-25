@@ -40,7 +40,7 @@ const formatEnum = z.enum(["html", "jsx", "mjml", "maizzle"]).optional();
  * How much compatibility detail to return.
  *
  * `summary` collapses the engine's per-client, per-selector warnings into one
- * entry per problem listing the clients it affects — the same information at a
+ * entry per problem listing the clients it affects: the same information at a
  * fraction of the tokens. `full` is the engine's own shape, per client, with
  * fix snippets, for a caller that wants everything.
  */
@@ -48,7 +48,7 @@ const detailEnum = z
   .enum(["summary", "full"])
   .optional()
   .describe(
-    "'summary' (default) returns one entry per problem, listing the clients it affects — roughly 10x smaller. 'full' returns one entry per client with fix snippets.",
+    "'summary' (default) returns one entry per problem, listing the clients it affects (roughly 10x smaller). 'full' returns one entry per client with fix snippets.",
   );
 
 const clientsParam = z
@@ -62,7 +62,7 @@ const clientsParam = z
  * Reject a client id the engine does not know.
  *
  * Filtering to a typo would return an empty list, which reads as "this email
- * is fine for that client" — the most misleading answer the tool can give.
+ * is fine for that client"; the most misleading answer the tool can give.
  */
 function validateClients(clients: string[] | undefined) {
   if (!clients?.length) return undefined;
@@ -108,7 +108,7 @@ function compatibilityPayload(
  * Do source positions refer to the code the caller handed us?
  *
  * Only for plain HTML. JSX, MJML and Maizzle are compiled before analysis, so a
- * position would point into generated output — worse than none, because an
+ * position would point into generated output: worse than none, because an
  * agent would edit the wrong line with confidence.
  */
 function positionsApply(format?: string): boolean {
@@ -120,7 +120,7 @@ function positionsApply(format?: string): boolean {
  *
  * Deliberately compact: this response is read by a model paying for every
  * token, and a newsletter can produce a thousand occurrences. The first one
- * gets a full position — enough to edit it — and the rest are reduced to line
+ * gets a full position, enough to edit it, and the rest are reduced to line
  * numbers, which is all an assistant needs to go find them. Carrying every
  * occurrence in full nearly doubled the payload on a real fixture.
  */
@@ -158,7 +158,7 @@ server.registerTool(
   {
     title: "Preview Email",
     description:
-      `Full email compatibility preview — transforms HTML for ${EMAIL_CLIENTS.length} email clients (Gmail, Outlook, Apple Mail, Yahoo, Samsung, Thunderbird, HEY, Proton Mail, AOL, Fastmail, Superhuman), analyzes CSS, generates scores, simulates dark mode, checks inbox preview and email size.`,
+      `Full email compatibility preview, transforms HTML for ${EMAIL_CLIENTS.length} email clients (Gmail, Outlook, Apple Mail, Yahoo, Samsung, Thunderbird, HEY, Proton Mail, AOL, Fastmail, Superhuman), analyzes CSS, generates scores, simulates dark mode, checks inbox preview and email size.`,
     inputSchema: {
       html: z.string().describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so"),
       clients: z
@@ -259,7 +259,7 @@ server.registerTool(
   {
     title: "Analyze Email",
     description:
-      "Quick CSS compatibility analysis — returns per-client scores and one finding per problem, listing the clients it affects. For HTML input each finding carries loc (line, column, offset) and alsoAtLines, so you can edit the exact source. Narrow with clients, or pass detail:'full' for the per-client breakdown with fix snippets. Use audit_email for a full quality report (spam, links, a11y, images, etc.).",
+      "Quick CSS compatibility analysis, returns per-client scores and one finding per problem, listing the clients it affects. For HTML input each finding carries loc (line, column, offset) and alsoAtLines, so you can edit the exact source. Narrow with clients, or pass detail:'full' for the per-client breakdown with fix snippets. Use audit_email for a full quality report (spam, links, a11y, images, etc.).",
     inputSchema: {
       html: z.string().describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so"),
       format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle'. Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets."),
@@ -322,7 +322,7 @@ server.registerTool(
   {
     title: "Audit Email",
     description:
-      "Comprehensive email quality audit — CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), and template variables. For HTML input, findings tied to a specific element carry loc (line, column, offset) so you can edit the exact source. Compatibility is collapsed to one finding per problem listing the clients it affects; pass detail:'full' for the per-client breakdown with fix snippets. Use skip to omit checks and clients to narrow which clients are reported.",
+      "Comprehensive email quality audit: CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), and template variables. For HTML input, findings tied to a specific element carry loc (line, column, offset) so you can edit the exact source. Compatibility is collapsed to one finding per problem listing the clients it affects; pass detail:'full' for the per-client breakdown with fix snippets. Use skip to omit checks and clients to narrow which clients are reported.",
     inputSchema: {
       html: z.string().describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so"),
       format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle'. Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets."),
@@ -401,7 +401,7 @@ server.registerTool(
     description:
       "Generate a structured fix prompt for email compatibility issues. Returns markdown with the original code, detected issues (CSS or structural), fix snippets, and format-specific instructions. Use after preview_email or analyze_email.",
     inputSchema: {
-      html: z.string().describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so — the source to fix"),
+      html: z.string().describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so: the source to fix"),
       format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle'. Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets."),
       scope: z.enum(["all", "current"]).optional().describe("'all' (default) or 'current' (requires selectedClientId)"),
       selectedClientId: z.string().optional().describe("Client ID to scope fixes to (e.g. 'outlook-windows')"),
@@ -420,7 +420,7 @@ server.registerTool(
 
     // The findings come from the compiled output, because that is what a
     // client renders. The prompt keeps the caller's own source, because that is
-    // the file they will edit — a fix written against generated HTML is not a
+    // the file they will edit; a fix written against generated HTML is not a
     // fix they can apply.
     const source = await toHtml(html, format);
     if (!source.ok) return mcpError(source.message);
@@ -534,7 +534,7 @@ server.registerTool(
   {
     title: "Diff Emails",
     description:
-      "Compare two email HTML versions — shows score changes, fixed issues, and newly introduced issues per client. Use after making fixes to verify improvements.",
+      "Compare two email HTML versions, shows score changes, fixed issues, and newly introduced issues per client. Use after making fixes to verify improvements.",
     inputSchema: {
       before: z.string().describe("Original email source"),
       after: z.string().describe("Modified email source, in the same format"),
@@ -624,7 +624,7 @@ server.registerTool(
   {
     title: "Check Deliverability",
     description:
-      "Check email deliverability for a domain — SPF, DKIM, DMARC, MX, and BIMI records. Returns a score (0-100) and actionable issues. Uses DNS lookups (no API key needed).",
+      "Check email deliverability for a domain: SPF, DKIM, DMARC, MX, and BIMI records. Returns a score (0-100) and actionable issues. Uses DNS lookups (no API key needed).",
     inputSchema: {
       domain: z
         .string()

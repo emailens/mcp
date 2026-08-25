@@ -2,7 +2,7 @@
 #
 # A dependency range is not a pin. `@emailens/cli` 0.4.1 depended on
 # `^0.10.2`, the engine published 0.10.3, and four tests started failing for
-# everyone who installed after that release — while CI, had there been any,
+# everyone who installed after that release, while CI, had there been any,
 # would have stayed green on the committed lockfile forever. The tests were
 # asserting positions the engine had legitimately moved.
 #

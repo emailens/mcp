@@ -2,7 +2,7 @@
 #
 # The registry entry sat at 0.4.1 through four npm releases, still telling
 # anyone who found the server that way that it covered 15 email clients. There
-# were 21. `server.json` in this repo was correct the whole time — nothing had
+# were 21. `server.json` in this repo was correct the whole time; nothing had
 # ever pushed it.
 #
 # So the push is a workflow rather than a step in someone's head. It runs on a

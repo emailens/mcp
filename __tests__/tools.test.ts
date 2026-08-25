@@ -6,7 +6,7 @@ import type { Subprocess } from "bun";
  * Integration tests for MCP tool behavior.
  *
  * Spawns the MCP server as a subprocess and communicates via JSON-RPC
- * over stdin/stdout — the same way real MCP clients connect.
+ * over stdin/stdout: the same way real MCP clients connect.
  */
 
 let proc: Subprocess<"pipe", "pipe", "pipe">;
@@ -98,7 +98,7 @@ const SIMPLE_HTML = `<html><head><title>Test</title></head><body><table><tr><td 
 const BAD_HTML = `<html><head><style>body{display:grid;gap:20px;position:sticky;backdrop-filter:blur(10px);clip-path:circle();animation:spin 1s infinite}@keyframes spin{to{transform:rotate(360deg)}}</style></head><body><div style="display:flex;gap:16px;max-width:600px;border-radius:8px;word-break:break-all;box-shadow:0 2px 8px rgba(0,0,0,0.1);background-image:linear-gradient(to right,#fff,#eee);position:relative;overflow:hidden;text-overflow:ellipsis">Hello</div></body></html>`;
 
 describe("analyze_email", () => {
-  test("returns CSS-only output — no spam, links, a11y, or images fields", async () => {
+  test("returns CSS-only output: no spam, links, a11y, or images fields", async () => {
     const result = await callTool("analyze_email", { html: SIMPLE_HTML });
     const data = parseToolJson(result) as Record<string, unknown>;
 
@@ -281,8 +281,8 @@ describe("source positions", () => {
   test("analyze_email locates the finding in the HTML it was given", async () => {
     const radius = (await findings()).filter((f) => f.property === "border-radius" && f.loc);
 
-    // border-radius appears three times here — once in the <style> block and
-    // once in each <div> — and is dropped by the same clients for the same
+    // border-radius appears three times here, once in the <style> block and
+    // once in each <div>, and is dropped by the same clients for the same
     // reason every time. That is one problem in three places, so it is one
     // finding: `loc` on the first, the rest as lines.
     expect(radius).toHaveLength(1);
@@ -298,7 +298,7 @@ describe("source positions", () => {
     expect(radius.clients.length).toBeGreaterThan(1);
   });
 
-  test("positions stay compact — the response is read by a model", async () => {
+  test("positions stay compact: the response is read by a model", async () => {
     const located = (await findings()).find((f) => f.loc)!;
     expect(Object.keys(located.loc!).sort()).toEqual(["column", "length", "line", "offset"]);
   });
@@ -356,7 +356,7 @@ describe("source positions", () => {
     expect(insecure?.loc?.line).toBe(6);
   });
 
-  test("compiled input gets no positions — they would point at generated HTML", async () => {
+  test("compiled input gets no positions: they would point at generated HTML", async () => {
     // MJML compiles before analysis, so any line number would refer to output
     // the caller never wrote. Better to return none than to mislead an agent
     // into editing the wrong line.

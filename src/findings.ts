@@ -6,7 +6,7 @@ import { EMAIL_CLIENTS, type CSSWarning, type SourceLocation } from "@emailens/e
  *
  * The engine reports per client because a score is per client, and per selector
  * because a fix is per selector. On an ordinary 11KB newsletter that is 347
- * warnings — which collapse to **46 distinct property-and-severity pairs**.
+ * warnings, which collapse to **46 distinct property-and-severity pairs**.
  * `border-radius` alone arrives twelve times: two clients that drop it, six
  * selectors that use it, the same sentence and the same VML workaround in every
  * one. Serialised with the fix snippets that is 286KB, about 73,000 tokens, for
@@ -78,7 +78,7 @@ function mergeLocations(group: CSSWarning[]): SourceLocation[] {
 /**
  * Collapse per-client, per-selector warnings into one entry each.
  *
- * Grouped by property, severity **and message** — two clients can both drop a
+ * Grouped by property, severity **and message**: two clients can both drop a
  * property for different reasons, and merging those would attribute a caveat
  * to a client whose note never said it.
  */
@@ -86,7 +86,7 @@ export function collapseWarnings(warnings: CSSWarning[]): CollapsedFinding[] {
   const groups = new Map<string, CSSWarning[]>();
   for (const w of warnings) {
     // A NUL separator, because it cannot occur in a property, a severity or
-    // a message — a space could, and two different triples would collide.
+    // a message; a space could, and two different triples would collide.
     const key = [w.property, w.severity, withoutClientName(w.message, w.client)].join("\u0000");
     const seen = groups.get(key);
     if (seen) seen.push(w);

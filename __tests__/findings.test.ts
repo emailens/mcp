@@ -5,7 +5,7 @@ import { analyzeEmail, auditEmail, EMAIL_CLIENTS, type CSSWarning } from "@email
 import { collapseWarnings, forClients, knownClientIds } from "../src/findings";
 
 /**
- * The size of the response is the feature here, so it is what these assert —
+ * The size of the response is the feature here, so it is what these assert,
  * against a real newsletter, not a snippet. An 11KB email produced 286KB of
  * JSON, about 73,000 tokens, which is more than most callers can take in one
  * turn and all of them pay for.
@@ -13,7 +13,7 @@ import { collapseWarnings, forClients, knownClientIds } from "../src/findings";
 
 // Vendored rather than reached for in a sibling checkout. It was an absolute
 // path into one machine's home directory, so the whole file threw ENOENT
-// anywhere else — including on CI, the first time there was any.
+// anywhere else, including on CI, the first time there was any.
 const FIXTURE = join(import.meta.dir, "fixtures", "cerberus-newsletter.html");
 const html = readFileSync(FIXTURE, "utf8");
 const warnings = analyzeEmail(html, undefined, { positions: true });
@@ -89,8 +89,8 @@ describe("collapsing the response", () => {
   test("a message that names its client mid-sentence stays one per client", () => {
     // The limit of collapsing, stated rather than hidden. Support warnings
     // open with the client's name, so stripping it makes the copies converge.
-    // The dark-mode warnings put it in the middle — "…so Apple Mail may keep
-    // the email in light mode" — and merging those would print Apple Mail's
+    // The dark-mode warnings put it in the middle ("…so Apple Mail may keep
+    // the email in light mode"), and merging those would print Apple Mail's
     // sentence against Samsung Mail. They stay separate, and should.
     const darkMode = warnings.filter((w) => w.property === "dark-mode-opt-in");
     expect(darkMode.length).toBeGreaterThan(1);
@@ -109,7 +109,7 @@ describe("collapsing the response", () => {
     const collapsed = collapseWarnings(warnings);
     for (const f of collapsed) {
       for (const client of EMAIL_CLIENTS) {
-        // A message must not open with a client name — that was the duplicated
+        // A message must not open with a client name, that was the duplicated
         // part. It may still mention one in the middle, as caniemail notes do.
         expect([f.property, f.message.startsWith(client.name + " ")]).toEqual([f.property, false]);
       }
@@ -118,8 +118,8 @@ describe("collapsing the response", () => {
   });
 
   test("a suggestion that differs between clients is dropped rather than guessed", () => {
-    // Built the way the engine builds them — each message opening with its own
-    // client's name — so the two land in one group.
+    // Built the way the engine builds them, each message opening with its own
+    // client's name, so the two land in one group.
     const base = warnings[0];
     const say = (clientId: string, suggestion: string): CSSWarning => ({
       ...base,

@@ -5,7 +5,7 @@ import { join } from "node:path";
 /**
  * The version is written down in four places, and they have to agree.
  *
- * `package.json` is what npm publishes. `server.json` carries it twice — once
+ * `package.json` is what npm publishes. `server.json` carries it twice: once
  * for the registry entry and once for the npm package it points at, which the
  * registry rejects if it is not a real published version. And the server
  * announces its own version over stdio in `initialize`, which is what a client

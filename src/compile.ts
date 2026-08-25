@@ -11,8 +11,8 @@ import { compile } from "@emailens/engine/compile";
  * answer delivered confidently is worse than an error.
  *
  * So a non-HTML format is compiled first, with the same compilers the CLI uses.
- * They are optional peer dependencies of the engine — MJML alone is 56MB, and
- * this server is usually run through `npx` — so a caller can land on a machine
+ * They are optional peer dependencies of the engine (MJML alone is 56MB, and
+ * this server is usually run through `npx`), so a caller can land on a machine
  * that has none of them. That case gets the engine's own "install this" message
  * plus the way out that needs nothing installed: compile it yourself and send
  * the HTML.
@@ -25,8 +25,8 @@ const COMPILED: ReadonlySet<string> = new Set(["jsx", "mjml", "maizzle"]);
 /**
  * Is this "the package isn't here" rather than "the template is wrong"?
  *
- * The engine reports every missing peer with the same sentence — `MJML
- * compilation requires "mjml"` — across all three compilers, so one pattern
+ * The engine reports every missing peer with the same sentence, `MJML
+ * compilation requires "mjml"`, across all three compilers, so one pattern
  * covers them. Getting this wrong is cheap in one direction only: a
  * misclassified template error gains an irrelevant sentence, while a
  * misclassified missing package would tell someone to debug markup that is

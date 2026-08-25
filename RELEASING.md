@@ -11,9 +11,9 @@ engine had tracked 21 for four releases. `server.json` in this repo was correct
 the whole time. Nothing had ever pushed it.
 
 Nobody notices, because npm is where you look and the registry is where other
-people look. So the registry publish is now a workflow —
-`.github/workflows/publish-registry.yml`, on a published GitHub release or on
-demand — rather than a step someone has to remember.
+people look. So the registry publish is now a workflow
+(`.github/workflows/publish-registry.yml`, on a published GitHub release or on
+demand) rather than a step someone has to remember.
 
 It needs no secrets. The registry accepts GitHub OIDC for an `io.github.*`
 namespace, so there is no token to store or rotate.
@@ -24,7 +24,7 @@ namespace, so there is no token to store or rotate.
 |---|---|
 | `package.json` `version` | what npm publishes |
 | `server.json` `version` | the registry entry |
-| `server.json` `packages[0].version` | the npm version the entry points at — the registry rejects one that does not exist |
+| `server.json` `packages[0].version` | the npm version the entry points at; the registry rejects one that does not exist |
 | `src/index.ts` `new McpServer({ version })` | what a client shows in its server list |
 
 All four have to agree, and they have not before: the server announced `0.4.0`
@@ -41,7 +41,7 @@ bun test
 bun run build
 ```
 
-Then bump all four version fields — the test tells you if you missed one — and
+Then bump all four version fields (the test tells you if you missed one) and
 write the changelog entry.
 
 ```bash
@@ -57,8 +57,8 @@ by hand from the Actions tab.
 ## Versions
 
 The convention across these repos: **patch for additive, minor when existing
-output moves.** 0.6.2 restored documented behaviour that had never worked —
-`format: "mjml"` returned an empty report rather than compiling — and shipped
+output moves.** 0.6.2 restored documented behaviour that had never worked
+(`format: "mjml"` returned an empty report rather than compiling) and shipped
 as a patch, because "no problems" for a template the server never read was not
 output worth preserving.
 

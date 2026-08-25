@@ -16,7 +16,7 @@
 
 </div>
 
-MCP server for email compatibility analysis. Analyze, preview, diff, and fix emails across 21 email clients — plus capture real screenshots and create shareable links with an optional API key.
+MCP server for email compatibility analysis. Analyze, preview, diff, and fix emails across 21 email clients, plus capture real screenshots and create shareable links with an optional API key.
 
 Send **HTML, MJML, Maizzle or React Email**. Set `format` and the template is compiled before analysis, so what gets checked is the HTML your readers actually receive.
 
@@ -53,7 +53,7 @@ Add to `claude_desktop_config.json`:
 claude mcp add emailens -- npx -y @emailens/mcp
 ```
 
-### With API Key (optional — unlocks screenshots + sharing)
+### With API Key (optional, unlocks screenshots + sharing)
 
 ```json
 {
@@ -73,7 +73,7 @@ Get your free API key at [emailens.dev/settings/api-keys](https://emailens.dev/s
 
 ### Remote (no install)
 
-Use the hosted endpoint — no npm or Node.js needed. API key required.
+Use the hosted endpoint: no npm or Node.js needed. API key required.
 
 ```json
 {
@@ -94,7 +94,7 @@ Use the hosted endpoint — no npm or Node.js needed. API key required.
 
 #### `preview_email`
 
-Full email compatibility preview — transforms HTML for 21 clients, analyzes CSS, generates scores, simulates dark mode, checks inbox preview and email size.
+Full email compatibility preview: transforms HTML for 21 clients, analyzes CSS, generates scores, simulates dark mode, checks inbox preview and email size.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
@@ -104,7 +104,7 @@ Full email compatibility preview — transforms HTML for 21 clients, analyzes CS
 
 #### `analyze_email`
 
-Quick CSS compatibility analysis — returns per-client scores and one finding per problem. Faster than `audit_email` when you only need CSS compatibility.
+Quick CSS compatibility analysis; returns per-client scores and one finding per problem. Faster than `audit_email` when you only need CSS compatibility.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
@@ -115,8 +115,8 @@ Quick CSS compatibility analysis — returns per-client scores and one finding p
 
 **One finding per problem, not one per client.** The engine reports per client
 because a score is per client, and per selector because a fix is per selector.
-On an ordinary newsletter `border-radius` arrives twelve times — two clients
-that drop it, six selectors that use it — with the same sentence in every copy.
+On an ordinary newsletter `border-radius` arrives twelve times (two clients
+that drop it, six selectors that use it) with the same sentence in every copy.
 That was 286KB of JSON, about 73,000 tokens, for an 11KB email.
 
 Findings group by property, severity and message, listing the clients affected,
@@ -135,19 +135,19 @@ with positions merged across all of them. The same email now returns 40KB.
 }
 ```
 
-Fix snippets are not included — they were 93KB of that 286KB, and `fix_email`
+Fix snippets are not included; they were 93KB of that 286KB, and `fix_email`
 produces them for the issues you decide to act on. `hasFix` tells you one is
 available; `fixType` tells you whether the repair is markup or CSS.
 
 Pass `detail: "full"` for the engine's per-client shape with snippets, and
-`clients: ["gmail-web", "outlook-windows"]` to report only what you care about
-— the fastest further saving, roughly halving the response for two clients.
+`clients: ["gmail-web", "outlook-windows"]` to report only what you care about:
+the fastest further saving, roughly halving the response for two clients.
 Scores stay whole-email either way: narrowing the report does not change what
-the email is worth elsewhere. An unknown client ID is rejected by name — an
+the email is worth elsewhere. An unknown client ID is rejected by name; an
 empty result would read as "this email is fine for that client".
 
-**Source positions.** For HTML input, every warning carries `loc` — `line`,
-`column`, `offset`, `length` — for the first occurrence, plus `alsoAtLines` for
+**Source positions.** For HTML input, every warning carries `loc` (`line`,
+`column`, `offset`, `length`) for the first occurrence, plus `alsoAtLines` for
 any others, so an assistant can edit the exact source and knows where the rest
 are. `audit_email` positions its other findings the same way.
 
@@ -161,17 +161,17 @@ are. `audit_email` positions its other findings the same way.
 
 Later occurrences are line numbers rather than full positions on purpose: this
 response is read by a model paying for every token, and a real newsletter can
-produce over a thousand occurrences — carrying them all in full nearly doubles
+produce over a thousand occurrences; carrying them all in full nearly doubles
 the payload.
 
 Positions are reported for `html` input only. JSX, MJML and Maizzle are compiled
 before analysis, so a line number would point into generated output rather than
-the file you have open — the tools omit it instead of returning one that looks
+the file you have open: the tools omit it instead of returning one that looks
 authoritative.
 
 #### `audit_email`
 
-Comprehensive quality audit — CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), template variables, content overflow, and visual bugs.
+Comprehensive quality audit: CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), template variables, content overflow, and visual bugs.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
@@ -198,7 +198,7 @@ List all 21 supported email clients with IDs, names, engines, and dark mode supp
 
 #### `diff_emails`
 
-Compare two email HTML versions — shows score changes, fixed issues, and introduced issues per client.
+Compare two email HTML versions; shows score changes, fixed issues, and introduced issues per client.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
@@ -208,7 +208,7 @@ Compare two email HTML versions — shows score changes, fixed issues, and intro
 
 #### `check_deliverability`
 
-Check email deliverability for a domain — SPF, DKIM, DMARC, MX, BIMI records with a score and actionable issues.
+Check email deliverability for a domain: SPF, DKIM, DMARC, MX, BIMI records with a score and actionable issues.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
@@ -265,7 +265,7 @@ npm install sucrase react @react-email/components @react-email/render  # React E
 
 They have to be installed where the server runs, which is not always somewhere
 you control. If it is not, compile the template yourself and send the resulting
-HTML with `format: "html"` — the tools say so when they hit this.
+HTML with `format: "html"`: the tools say so when they hit this.
 
 ## Supported Email Clients (21)
 

@@ -6,7 +6,7 @@ import { toHtml } from "../src/compile";
  * The bug these exist for: `format` used to pick the syntax of the fix
  * snippets and nothing else, so an MJML template went to the analyzer as-is.
  * cheerio parses `<mjml><mj-section>` without complaint, finds no CSS, and the
- * tool answers **zero findings** — an assistant reads that as "your email is
+ * tool answers **zero findings**: an assistant reads that as "your email is
  * fine" and says so. The docs claimed the source was compiled; it was not.
  *
  * `mjml` is a devDependency so this runs the real compiler rather than a stub

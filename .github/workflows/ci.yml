@@ -24,8 +24,8 @@ jobs:
           bun-version: latest
 
       # --frozen-lockfile so CI installs what a contributor's checkout does.
-      # The other half of that question — what a *new* installer resolves once
-      # a dependency publishes — is latest-engine.yml's job.
+      # The other half of that question (what a *new* installer resolves once
+      # a dependency publishes) is latest-engine.yml's job.
       - run: bun install --frozen-lockfile
 
       - run: bun run typecheck
