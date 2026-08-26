@@ -133,6 +133,45 @@ describe("audit_email", () => {
     expect(data).toHaveProperty("inboxPreview");
     expect(data).toHaveProperty("size");
     expect(data).toHaveProperty("templateVariables");
+    expect(data).toHaveProperty("overflow");
+    expect(data).toHaveProperty("visual");
+    expect(data).toHaveProperty("darkContrast");
+    expect(data).toHaveProperty("mobileContrast");
+    expect(data).toHaveProperty("design");
+  });
+
+  // An email that actually trips the two new checks: the dark block repaints
+  // the card without re-colouring the text on it, and the two off-whites are
+  // the same colour to a reader.
+  const DARK_AND_DRIFTY = `<html lang="en"><head><title>Receipt</title><style>
+    @media (prefers-color-scheme: dark){ .card{background-color:#141519 !important} }
+  </style></head><body style="background:#f0ece4">
+    <table class="card" role="presentation"><tr><td style="color:#1a1714;font-size:14px">
+      <div>Archival Linen Notebook</div>
+    </td></tr></table>
+    <div style="color:#eae6de;font-size:14px">a</div>
+    <div style="color:#f4f2ed;font-size:14px">b</div>
+  </body></html>`;
+
+  test("skip omits the work a caller did not ask for", async () => {
+    const full = parseToolJson(
+      await callTool("audit_email", { html: DARK_AND_DRIFTY }),
+    ) as Record<string, unknown>;
+
+    // Guard the fixture: without this the skip assertion below proves nothing.
+    expect((full.darkContrast as unknown[]).length).toBeGreaterThan(0);
+    expect((full.design as { issues: unknown[] }).issues.length).toBeGreaterThan(0);
+
+    const skipped = parseToolJson(
+      await callTool("audit_email", {
+        html: DARK_AND_DRIFTY,
+        skip: ["darkContrast", "design"],
+      }),
+    ) as Record<string, unknown>;
+
+    expect(skipped.darkContrast).toEqual([]);
+    expect((skipped.design as { issues: unknown[] }).issues).toEqual([]);
+    expect(skipped).toHaveProperty("accessibility");
   });
 });
 

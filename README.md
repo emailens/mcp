@@ -171,7 +171,9 @@ authoritative.
 
 #### `audit_email`
 
-Comprehensive quality audit: CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), template variables, content overflow, and visual bugs.
+Comprehensive quality audit: CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), template variables, content overflow, visual bugs, dark-mode and mobile text contrast, and design consistency.
+
+The last three cover what a light desktop preview cannot show: text that disappears when a client forces dark mode or when the email's own dark block repaints a surface without re-colouring the text on it, contrast below the email's breakpoint, and colours that differ by value but not to a reader.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
