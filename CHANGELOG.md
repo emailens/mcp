@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.7.0 - 2026-08-26
+
+### Added
+
+- **`audit_email` returns the three checks a light desktop preview cannot show.** `darkContrast`, `mobileContrast` and `design`, from `@emailens/engine` 0.11.0. The engine had computed them since that release, but this tool builds its response field by field, so they were dropped on the way out: an assistant asking for a comprehensive audit got everything except the failures nobody can see by looking.
+
+  `darkContrast` covers both ways an email breaks in dark mode, which are not the same bug. Clients that force an inversion disagree with each other, so Gmail Android's partial and Gmail iOS's full inversion are both graded. Separately, the email's own `@media (prefers-color-scheme: dark)` block is applied the way Apple Mail, Superhuman and Thunderbird apply it, which catches a dark block that repaints a card without re-colouring the text sitting on it. That lands at 1:1, and no light-mode check can see it.
+
+  `mobileContrast` grades what a `max-width` block restyles. `design` reports colours that differ by value but not to a reader (OKLab distance under 0.02), and runaway counts of type sizes, typefaces and corner radii.
+
+### Changed
+
+- **`skip` now mirrors the engine's list exactly.** It was missing `overflow` and `visual`, which the tool already returned but a caller could not omit, and for a server that spends this much effort on response size that was the wrong half of the pair to leave out. Adding the three new checks without fixing that would have repeated it.
+
+- **Every diagnostic message is reworded.** `@emailens/engine` 0.11.0 replaced the em dashes in its messages with grammatical punctuation, and this server returns those messages verbatim, so anything matching on message text needs regenerating. Rule ids, severities and counts are unchanged.
+
+- **Contrast findings move.** The same release grades contrast against a resolved CSS cascade rather than inline styles, so `accessibility` loses false positives where a background was previously unreadable and gains real findings where a stylesheet rule was previously unread.
+
 ## 0.6.2 - 2026-08-23
 
 ### Fixed

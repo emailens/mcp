@@ -1,7 +1,7 @@
 {
   "name": "@emailens/mcp",
   "mcpName": "io.github.emailens/mcp",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "description": "MCP server for email compatibility analysis: preview, analyze, fix, diff and capture screenshots across 21 email clients, from HTML, MJML, Maizzle or React Email sources, via Claude or any MCP-compatible tool.",
   "type": "module",
   "bin": {

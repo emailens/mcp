@@ -3,7 +3,7 @@
   "name": "io.github.emailens/mcp",
   "title": "Emailens MCP",
   "description": "Analyze, audit, fix and diff HTML, MJML, Maizzle and React Email across 21 email clients.",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "repository": {
     "url": "https://github.com/emailens/mcp",
     "source": "github"
@@ -13,7 +13,7 @@
     {
       "registryType": "npm",
       "identifier": "@emailens/mcp",
-      "version": "0.6.2",
+      "version": "0.7.0",
       "transport": {
         "type": "stdio"
       },
