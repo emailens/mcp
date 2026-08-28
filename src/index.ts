@@ -322,12 +322,12 @@ server.registerTool(
   {
     title: "Audit Email",
     description:
-      "Comprehensive email quality audit: CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), template variables, content overflow, visual fallbacks, dark-mode and mobile text contrast, and design consistency. For HTML input, findings tied to a specific element carry loc (line, column, offset) so you can edit the exact source. Compatibility is collapsed to one finding per problem listing the clients it affects; pass detail:'full' for the per-client breakdown with fix snippets. Use skip to omit checks and clients to narrow which clients are reported.",
+      "Comprehensive email quality audit: CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), template variables, content overflow, visual fallbacks, dark-mode and mobile text contrast, design consistency, and structural faults in Outlook-only VML (which lives inside conditional comments and is invisible to every other check). For HTML input, findings tied to a specific element carry loc (line, column, offset) so you can edit the exact source. Compatibility is collapsed to one finding per problem listing the clients it affects; pass detail:'full' for the per-client breakdown with fix snippets. Use skip to omit checks and clients to narrow which clients are reported.",
     inputSchema: {
       html: z.string().describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so"),
       format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle'. Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets."),
       skip: z
-        .array(z.enum(["spam", "links", "accessibility", "images", "compatibility", "inboxPreview", "size", "templateVariables", "overflow", "visual", "darkContrast", "mobileContrast", "design"]))
+        .array(z.enum(["spam", "links", "accessibility", "images", "compatibility", "inboxPreview", "size", "templateVariables", "overflow", "visual", "darkContrast", "mobileContrast", "design", "vml"]))
         .optional()
         .describe("Checks to skip (e.g. ['spam', 'images'])"),
       detail: detailEnum,
@@ -382,6 +382,7 @@ server.registerTool(
               templateVariables: report.templateVariables,
               overflow: report.overflow,
               visual: report.visual,
+              vml: report.vml,
               darkContrast: report.darkContrast,
               mobileContrast: report.mobileContrast,
               design: report.design,

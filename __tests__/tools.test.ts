@@ -138,6 +138,7 @@ describe("audit_email", () => {
     expect(data).toHaveProperty("darkContrast");
     expect(data).toHaveProperty("mobileContrast");
     expect(data).toHaveProperty("design");
+    expect(data).toHaveProperty("vml");
   });
 
   // An email that actually trips the two new checks: the dark block repaints
@@ -152,6 +153,36 @@ describe("audit_email", () => {
     <div style="color:#eae6de;font-size:14px">a</div>
     <div style="color:#f4f2ed;font-size:14px">b</div>
   </body></html>`;
+
+  // VML lives inside conditional comments, so it is a comment node to every
+  // parser: the one section of an email no other check in this tool can see.
+  const NESTED_VML = `<html xmlns:v="urn:schemas-microsoft-com:vml"><body>
+    <!--[if gte mso 9]><v:rect style="width:596px; height:px;"><v:textbox><![endif]-->
+    <p>hero</p>
+    <!--[if mso]><v:roundrect style="width:170px; height:40px;" arcsize="120%"><center>Go</center></v:roundrect><![endif]-->
+    <!--[if gte mso 9]></v:textbox></v:rect><![endif]-->
+  </body></html>`;
+
+  test("reports VML faults that live inside conditional comments", async () => {
+    const data = parseToolJson(
+      await callTool("audit_email", { html: NESTED_VML }),
+    ) as Record<string, unknown>;
+
+    const vml = data.vml as { hasVml: boolean; issues: Array<{ rule: string }> };
+    expect(vml.hasVml).toBe(true);
+    const rules = vml.issues.map((i) => i.rule);
+    expect(rules).toContain("vml-nested-shape");
+    expect(rules).toContain("vml-invalid-dimension");
+    expect(rules).toContain("vml-arcsize-range");
+  });
+
+  test("skip:['vml'] omits the VML section", async () => {
+    const skipped = parseToolJson(
+      await callTool("audit_email", { html: NESTED_VML, skip: ["vml"] }),
+    ) as Record<string, unknown>;
+    expect((skipped.vml as { issues: unknown[] }).issues).toEqual([]);
+    expect(skipped).toHaveProperty("accessibility");
+  });
 
   test("skip omits the work a caller did not ask for", async () => {
     const full = parseToolJson(
