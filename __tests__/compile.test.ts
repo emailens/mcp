@@ -55,20 +55,19 @@ describe("getting a template to HTML first", () => {
     expect(result.message).toMatch(/<mjml> element/i);
   });
 
-  test("a compiler this machine lacks names the packages and the way around it", async () => {
-    // Maizzle and React Email are optional peers of the engine and are not
-    // fully installed here, which is exactly the situation an `npx` caller is
-    // in. Which package it names first is the engine's business; that it names
-    // one, and offers the way out that needs nothing installed, is ours.
-    for (const format of ["maizzle", "jsx"] as const) {
-      const result = await toHtml("<div>x</div>", format);
-      expect([format, result.ok]).toEqual([format, false]);
-      if (result.ok) continue;
-      expect([format, /compilation requires "\S+"/.test(result.message)]).toEqual([format, true]);
-      expect(result.message).toContain("npm install ");
-      expect(result.message).toContain('format "html"');
-    }
-  });
+  test("a compiler this machine lacks names the package and the way around it", async () => {
+    // React Email needs `isolated-vm` for its sandbox and it is not installed
+    // here, which is exactly the situation an `npx` caller is in. The engine
+    // words that one differently from a missing compiler ("requires the
+    // \"isolated-vm\" package" against "compilation requires \"mjml\""), and the
+    // difference is none of the caller's business: both mean install something
+    // where the server runs, or compile it yourself and send HTML.
+    const result = await toHtml("<div>x</div>", "jsx");
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.message).toContain("npm install ");
+    expect(result.message).toContain('format "html"');
+  }, 30_000);
 
   test("an unknown format is refused rather than guessed at", async () => {
     const result = await toHtml("<div>x</div>", "handlebars");

@@ -25,15 +25,16 @@ const COMPILED: ReadonlySet<string> = new Set(["jsx", "mjml", "maizzle"]);
 /**
  * Is this "the package isn't here" rather than "the template is wrong"?
  *
- * The engine reports every missing peer with the same sentence, `MJML
- * compilation requires "mjml"`, across all three compilers, so one pattern
- * covers them. Getting this wrong is cheap in one direction only: a
- * misclassified template error gains an irrelevant sentence, while a
- * misclassified missing package would tell someone to debug markup that is
- * fine.
+ * The engine says `MJML compilation requires "mjml"` for a missing compiler
+ * and `Sandbox strategy "isolated-vm" requires the "isolated-vm" package` when
+ * the compiler is present but its sandbox is not, which is what React Email
+ * hits first. Both are the same problem for the caller, so one pattern covers
+ * them. Getting this wrong is cheap in one direction only: a misclassified
+ * template error gains an irrelevant sentence, while a misclassified missing
+ * package would tell someone to debug markup that is fine.
  */
 function isMissingCompiler(message: string): boolean {
-  return /compilation requires "/.test(message);
+  return /requires (?:the )?"/.test(message);
 }
 
 /**
