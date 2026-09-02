@@ -184,6 +184,39 @@ describe("audit_email", () => {
     expect(skipped).toHaveProperty("accessibility");
   });
 
+  // CSS a client parses correctly and then throws away. No support matrix can
+  // express it, so nothing else in the report covers it.
+  const DISCARDED_CSS = `<!DOCTYPE html><html><head><style>
+    @media screen{div{color:#fff}}
+    .promo{background:rgb(255 0 0)}
+  </style></head><body><p>hi</p></body></html>`;
+
+  test("reports CSS a client keeps nothing of", async () => {
+    const data = parseToolJson(
+      await callTool("audit_email", { html: DISCARDED_CSS }),
+    ) as Record<string, unknown>;
+
+    const survival = data.styleSurvival as {
+      issues: Array<{ rule: string; clients: string[] }>;
+    };
+    const rules = survival.issues.map((i) => i.rule);
+    expect(rules).toContain("outlook-double-brace");
+    expect(rules).toContain("gmail-space-separated-color");
+    // The clients are the finding: an issue that cannot name them does not
+    // group correctly on the consuming side.
+    for (const issue of survival.issues) {
+      expect([issue.rule, issue.clients.length > 0]).toEqual([issue.rule, true]);
+    }
+  });
+
+  test("skip:['styleSurvival'] omits the section", async () => {
+    const skipped = parseToolJson(
+      await callTool("audit_email", { html: DISCARDED_CSS, skip: ["styleSurvival"] }),
+    ) as Record<string, unknown>;
+    expect((skipped.styleSurvival as { issues: unknown[] }).issues).toEqual([]);
+    expect(skipped).toHaveProperty("accessibility");
+  });
+
   test("skip omits the work a caller did not ask for", async () => {
     const full = parseToolJson(
       await callTool("audit_email", { html: DARK_AND_DRIFTY }),

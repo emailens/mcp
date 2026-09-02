@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.8.0 - 2026-09-03
+
+### Added
+
+- **`styleSurvival` in `audit_email`.** Engine 0.12.1 added rules for CSS a
+  client parses correctly and then discards: a stylesheet past Gmail's 16 KB
+  ceiling, every rule after a `}}`, an attribute selector holding a semicolon
+  that costs Yahoo and AOL the rest of the file. No support matrix can express
+  that, so nothing else in the report covered it. Each issue names the clients
+  that drop the CSS, because that is the finding. `skip` accepts
+  `"styleSurvival"` like every other section.
+
+### Fixed
+
+- **`server.json` said 0.7.0 while the package was 0.7.1.** That is the version
+  a client shows in its server list, and the manifest test has been failing on
+  it since the 0.7.1 bump. All three sites move together now.
+
+### Changed
+
+- **Requires engine >=0.12.2.** 0.12.1 narrowed `EmailClient.id`, which breaks
+  the two places here that key a Map or Set by client id; 0.12.2 reverts that
+  and is the first release this can run on.
+
 ## 0.7.0 - 2026-08-26
 
 ### Added
