@@ -20,7 +20,7 @@ MCP server for email compatibility analysis. Analyze, preview, diff, and fix ema
 
 Send **HTML, MJML, Maizzle or React Email**. Set `format` and the template is compiled before analysis, so what gets checked is the HTML your readers actually receive.
 
-Why your assistant needs this: across the 255 CSS and HTML features we track, only 6 are fully supported in every major email client ([see the data](https://emailens.dev/email-css/report)). Ask Claude to check your email before you send it.
+Why your assistant needs this: across the 298 CSS and HTML features we track, only 6 are fully supported in every major email client ([see the data](https://emailens.dev/email-css/report)). Ask Claude to check your email before you send it.
 
 Built on [`@emailens/engine`](https://github.com/emailens/engine). Also available as a [GitHub Action](https://github.com/marketplace/actions/emailens-email-preview-check).
 
