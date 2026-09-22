@@ -112,6 +112,7 @@ Quick CSS compatibility analysis; returns per-client scores and one finding per 
 | `format` | enum | No | Input format |
 | `detail` | enum | No | `"summary"` (default) or `"full"` |
 | `clients` | string[] | No | Only report these client IDs |
+| `targetingPolicy` | enum | No | `"progressive"` (default), `"strict"`, or `"lenient"` |
 
 **One finding per problem, not one per client.** The engine reports per client
 because a score is per client, and per selector because a fix is per selector.
@@ -171,7 +172,7 @@ authoritative.
 
 #### `audit_email`
 
-Comprehensive quality audit: CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), template variables, content overflow, visual bugs, dark-mode and mobile text contrast, and design consistency.
+Comprehensive quality audit: CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), template variables, content overflow, visual bugs, dark-mode and mobile text contrast, design consistency, and client targeting.
 
 The last three cover what a light desktop preview cannot show: text that disappears when a client forces dark mode or when the email's own dark block repaints a surface without re-colouring the text on it, contrast below the email's breakpoint, and colours that differ by value but not to a reader.
 
@@ -182,6 +183,7 @@ The last three cover what a light desktop preview cannot show: text that disappe
 | `detail` | enum | No | `"summary"` (default) or `"full"` |
 | `clients` | string[] | No | Only report these client IDs |
 | `skip` | string[] | No | Checks to skip (e.g. `["spam", "images"]`) |
+| `targetingPolicy` | enum | No | `"progressive"` (default), `"strict"`, or `"lenient"` |
 
 #### `fix_email`
 

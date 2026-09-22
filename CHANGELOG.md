@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.9.0 - 2026-09-22
+
+### Added
+
+- **`targeting` in `audit_email`.** Engine 0.13.0 reports HowToTarget hacks
+  (Gmail `u + .body`, MSO conditionals, wrap-body clients) as a targeting
+  section, not as css-hack scores. `skip` accepts `"targeting"`. New
+  `targetingPolicy` on `audit_email`, `analyze_email` and `preview_email`:
+  `progressive` (default), `strict`, or `lenient`. Progressive suppresses
+  false-positive compatibility warnings inside targeted scopes.
+
+### Changed
+
+- **Requires engine >=0.13.0.**
+
 ## 0.8.0 - 2026-09-03
 
 ### Added

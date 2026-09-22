@@ -217,6 +217,29 @@ describe("audit_email", () => {
     expect(skipped).toHaveProperty("accessibility");
   });
 
+  const DEPRECATED_HACK = `<style>_:-webkit-full-screen, :root .card { background: blue; }</style><div class="card">Card</div>`;
+
+  test("reports deprecated client-targeting hacks", async () => {
+    const data = parseToolJson(
+      await callTool("audit_email", { html: DEPRECATED_HACK }),
+    ) as Record<string, unknown>;
+    const targeting = data.targeting as {
+      detectedHacks: unknown[];
+      warnings: Array<{ property: string }>;
+    };
+    expect(targeting.detectedHacks.length).toBeGreaterThan(0);
+    expect(targeting.warnings.some((w) => w.property === "css-hack")).toBe(true);
+  });
+
+  test("skip:['targeting'] omits the section", async () => {
+    const skipped = parseToolJson(
+      await callTool("audit_email", { html: DEPRECATED_HACK, skip: ["targeting"] }),
+    ) as Record<string, unknown>;
+    expect((skipped.targeting as { warnings: unknown[] }).warnings).toEqual([]);
+    expect((skipped.targeting as { detectedHacks: unknown[] }).detectedHacks).toEqual([]);
+    expect(skipped).toHaveProperty("accessibility");
+  });
+
   test("skip omits the work a caller did not ask for", async () => {
     const full = parseToolJson(
       await callTool("audit_email", { html: DARK_AND_DRIFTY }),

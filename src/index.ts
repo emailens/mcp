@@ -51,6 +51,32 @@ const detailEnum = z
     "'summary' (default) returns one entry per problem, listing the clients it affects (roughly 10x smaller). 'full' returns one entry per client with fix snippets.",
   );
 
+const targetingPolicyEnum = z
+  .enum(["progressive", "strict", "lenient"])
+  .optional()
+  .describe(
+    "'progressive' (default) suppresses compatibility false-positives inside client-targeted scopes and only flags deprecated or dangerous hacks. 'strict' treats targeting as non-standard and reports every hack. 'lenient' suppresses false positives and ignores non-fatal targeting warnings.",
+  );
+
+const skipEnum = z.enum([
+  "spam",
+  "links",
+  "accessibility",
+  "images",
+  "compatibility",
+  "inboxPreview",
+  "size",
+  "templateVariables",
+  "overflow",
+  "visual",
+  "darkContrast",
+  "mobileContrast",
+  "design",
+  "vml",
+  "styleSurvival",
+  "targeting",
+]);
+
 const clientsParam = z
   .array(z.string())
   .optional()
@@ -148,7 +174,7 @@ function validateHtmlSize(html: string) {
 
 const server = new McpServer({
   name: "emailens",
-  version: "0.8.0",
+  version: "0.9.0",
 });
 
 // ── Local Tool: preview_email ──────────────────────────────────────
@@ -166,6 +192,7 @@ server.registerTool(
         .optional()
         .describe("Optional client ID filter (e.g. ['gmail-web', 'outlook-windows'])"),
       format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle'. Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets."),
+      targetingPolicy: targetingPolicyEnum,
     },
     annotations: {
       title: "Preview Email",
@@ -175,7 +202,7 @@ server.registerTool(
       openWorldHint: false,
     },
   },
-  async ({ html, clients, format }) => {
+  async ({ html, clients, format, targetingPolicy }) => {
     const sizeError = validateHtmlSize(html);
     if (sizeError) return sizeError;
 
@@ -184,7 +211,7 @@ server.registerTool(
 
     const validClientIds = new Set(EMAIL_CLIENTS.map((c) => c.id));
     const framework = toFramework(format);
-    const session = createSession(source.html, { framework });
+    const session = createSession(source.html, { framework, targetingPolicy });
 
     let transforms;
     if (clients) {
@@ -265,6 +292,7 @@ server.registerTool(
       format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle'. Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets."),
       detail: detailEnum,
       clients: clientsParam,
+      targetingPolicy: targetingPolicyEnum,
     },
     annotations: {
       title: "Analyze Email",
@@ -274,7 +302,7 @@ server.registerTool(
       openWorldHint: false,
     },
   },
-  async ({ html, format, detail, clients }) => {
+  async ({ html, format, detail, clients, targetingPolicy }) => {
     const sizeError = validateHtmlSize(html);
     if (sizeError) return sizeError;
     const clientError = validateClients(clients);
@@ -285,6 +313,7 @@ server.registerTool(
 
     const warnings = analyzeEmail(source.html, toFramework(format), {
       positions: positionsApply(format),
+      targetingPolicy,
     });
     // Scores stay whole-email: filtering to two clients should narrow what is
     // reported, not silently change what the email scores.
@@ -322,16 +351,17 @@ server.registerTool(
   {
     title: "Audit Email",
     description:
-      "Comprehensive email quality audit: CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), template variables, content overflow, visual fallbacks, dark-mode and mobile text contrast, design consistency, structural faults in Outlook-only VML (which lives inside conditional comments and is invisible to every other check), and style survival: CSS a client parses correctly and then discards, such as a stylesheet past Gmail's 16 KB ceiling or every rule after a `}}`, which no support matrix can express. For HTML input, findings tied to a specific element carry loc (line, column, offset) so you can edit the exact source. Compatibility is collapsed to one finding per problem listing the clients it affects; pass detail:'full' for the per-client breakdown with fix snippets. Use skip to omit checks and clients to narrow which clients are reported.",
+      "Comprehensive email quality audit: CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), template variables, content overflow, visual fallbacks, dark-mode and mobile text contrast, design consistency, structural faults in Outlook-only VML (which lives inside conditional comments and is invisible to every other check), style survival: CSS a client parses correctly and then discards, such as a stylesheet past Gmail's 16 KB ceiling or every rule after a `}}`, which no support matrix can express, and client targeting: HowToTarget hacks such as Gmail u+.body or MSO conditionals, which do not score as css-hack. For HTML input, findings tied to a specific element carry loc (line, column, offset) so you can edit the exact source. Compatibility is collapsed to one finding per problem listing the clients it affects; pass detail:'full' for the per-client breakdown with fix snippets. Use skip to omit checks, targetingPolicy to change how targeted scopes affect scores, and clients to narrow which clients are reported.",
     inputSchema: {
       html: z.string().describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so"),
       format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle'. Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets."),
       skip: z
-        .array(z.enum(["spam", "links", "accessibility", "images", "compatibility", "inboxPreview", "size", "templateVariables", "overflow", "visual", "darkContrast", "mobileContrast", "design", "vml", "styleSurvival"]))
+        .array(skipEnum)
         .optional()
         .describe("Checks to skip (e.g. ['spam', 'images'])"),
       detail: detailEnum,
       clients: clientsParam,
+      targetingPolicy: targetingPolicyEnum,
     },
     annotations: {
       title: "Audit Email",
@@ -341,7 +371,7 @@ server.registerTool(
       openWorldHint: false,
     },
   },
-  async ({ html, format, skip, detail, clients }) => {
+  async ({ html, format, skip, detail, clients, targetingPolicy }) => {
     const sizeError = validateHtmlSize(html);
     if (sizeError) return sizeError;
     const clientError = validateClients(clients);
@@ -353,6 +383,7 @@ server.registerTool(
     const session = createSession(source.html, {
       framework: toFramework(format),
       positions: positionsApply(format),
+      targetingPolicy,
     });
     const report = session.audit({ skip });
 
@@ -387,6 +418,7 @@ server.registerTool(
               mobileContrast: report.mobileContrast,
               design: report.design,
               styleSurvival: report.styleSurvival,
+              targeting: report.targeting,
             },
             null,
             2,
