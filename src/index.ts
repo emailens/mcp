@@ -2,14 +2,16 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { collapseWarnings, forClients, knownClientIds } from "./findings.js";
-import { toHtml } from "./compile.js";
+import { resolveSourceFormat, toHtml } from "./compile.js";
 import {
   createSession,
   analyzeEmail,
   generateCompatibilityScore,
+  simulateDarkMode,
+  transformForAllClients,
+  transformForClient,
   generateFixPrompt,
   estimateAiFixTokens,
-  structuralWarnings,
   diffResults,
   toPlainText,
   EMAIL_CLIENTS,
@@ -191,7 +193,7 @@ server.registerTool(
         .array(z.string())
         .optional()
         .describe("Optional client ID filter (e.g. ['gmail-web', 'outlook-windows'])"),
-      format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle'. Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets."),
+      format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle' (HTML template or Vue single-file component). Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets. A pasted Vue file with no format is compiled as maizzle."),
       targetingPolicy: targetingPolicyEnum,
     },
     annotations: {
@@ -210,7 +212,7 @@ server.registerTool(
     if (!source.ok) return mcpError(source.message);
 
     const validClientIds = new Set(EMAIL_CLIENTS.map((c) => c.id));
-    const framework = toFramework(format);
+    const framework = toFramework(resolveSourceFormat(html, format));
     const session = createSession(source.html, { framework, targetingPolicy });
 
     let transforms;
@@ -221,19 +223,19 @@ server.registerTool(
           JSON.stringify({ error: "No valid client IDs provided", validClientIds: Array.from(validClientIds) }, null, 2),
         );
       }
-      transforms = filter.map((c) => session.transformForClient(c));
+      transforms = filter.map((c) => transformForClient(source.html, c, framework));
     } else {
-      transforms = session.transformForAllClients();
+      transforms = transformForAllClients(source.html, framework);
     }
 
     const warnings = session.analyze();
-    const scores = session.score(warnings);
+    const scores = generateCompatibilityScore(warnings);
     const inboxPreview = session.extractInboxPreview();
     const sizeReport = session.checkSize();
 
     const darkMode: Record<string, { html: string; warnings: CSSWarning[] }> = {};
     for (const t of transforms) {
-      darkMode[t.clientId] = session.simulateDarkMode(t.clientId);
+      darkMode[t.clientId] = simulateDarkMode(source.html, t.clientId);
     }
 
     const scoreValues = Object.values(scores);
@@ -242,7 +244,7 @@ server.registerTool(
         ? Math.round(scoreValues.reduce((a, b) => a + b.score, 0) / scoreValues.length)
         : 0;
 
-    const plainText = toPlainText(html);
+    const plainText = toPlainText(source.html);
 
     const result: Record<string, unknown> = {
       overallScore,
@@ -289,7 +291,7 @@ server.registerTool(
       "Quick CSS compatibility analysis, returns per-client scores and one finding per problem, listing the clients it affects. For HTML input each finding carries loc (line, column, offset) and alsoAtLines, so you can edit the exact source. Narrow with clients, or pass detail:'full' for the per-client breakdown with fix snippets. Use audit_email for a full quality report (spam, links, a11y, images, etc.).",
     inputSchema: {
       html: z.string().describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so"),
-      format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle'. Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets."),
+      format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle' (HTML template or Vue single-file component). Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets. A pasted Vue file with no format is compiled as maizzle."),
       detail: detailEnum,
       clients: clientsParam,
       targetingPolicy: targetingPolicyEnum,
@@ -311,8 +313,8 @@ server.registerTool(
     const source = await toHtml(html, format);
     if (!source.ok) return mcpError(source.message);
 
-    const warnings = analyzeEmail(source.html, toFramework(format), {
-      positions: positionsApply(format),
+    const warnings = analyzeEmail(source.html, toFramework(resolveSourceFormat(html, format)), {
+      positions: positionsApply(resolveSourceFormat(html, format)),
       targetingPolicy,
     });
     // Scores stay whole-email: filtering to two clients should narrow what is
@@ -354,7 +356,7 @@ server.registerTool(
       "Comprehensive email quality audit: CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), template variables, content overflow, visual fallbacks, dark-mode and mobile text contrast, design consistency, structural faults in Outlook-only VML (which lives inside conditional comments and is invisible to every other check), style survival: CSS a client parses correctly and then discards, such as a stylesheet past Gmail's 16 KB ceiling or every rule after a `}}`, which no support matrix can express, and client targeting: HowToTarget hacks such as Gmail u+.body or MSO conditionals, which do not score as css-hack. For HTML input, findings tied to a specific element carry loc (line, column, offset) so you can edit the exact source. Compatibility is collapsed to one finding per problem listing the clients it affects; pass detail:'full' for the per-client breakdown with fix snippets. Use skip to omit checks, targetingPolicy to change how targeted scopes affect scores, and clients to narrow which clients are reported.",
     inputSchema: {
       html: z.string().describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so"),
-      format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle'. Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets."),
+      format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle' (HTML template or Vue single-file component). Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets. A pasted Vue file with no format is compiled as maizzle."),
       skip: z
         .array(skipEnum)
         .optional()
@@ -381,8 +383,8 @@ server.registerTool(
     if (!source.ok) return mcpError(source.message);
 
     const session = createSession(source.html, {
-      framework: toFramework(format),
-      positions: positionsApply(format),
+      framework: toFramework(resolveSourceFormat(html, format)),
+      positions: positionsApply(resolveSourceFormat(html, format)),
       targetingPolicy,
     });
     const report = session.audit({ skip });
@@ -439,7 +441,7 @@ server.registerTool(
       "Generate a structured fix prompt for email compatibility issues. Returns markdown with the original code, detected issues (CSS or structural), fix snippets, and format-specific instructions. Use after preview_email or analyze_email.",
     inputSchema: {
       html: z.string().describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so: the source to fix"),
-      format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle'. Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets."),
+      format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle' (HTML template or Vue single-file component). Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets. A pasted Vue file with no format is compiled as maizzle."),
       scope: z.enum(["all", "current"]).optional().describe("'all' (default) or 'current' (requires selectedClientId)"),
       selectedClientId: z.string().optional().describe("Client ID to scope fixes to (e.g. 'outlook-windows')"),
     },
@@ -462,9 +464,14 @@ server.registerTool(
     const source = await toHtml(html, format);
     if (!source.ok) return mcpError(source.message);
 
-    const framework = toFramework(format);
+    const resolved = resolveSourceFormat(html, format) as
+      | "html"
+      | "jsx"
+      | "mjml"
+      | "maizzle";
+    const framework = toFramework(resolved);
     const fixScope = scope === "current" ? "current" : "all";
-    const inputFormat = format || "html";
+    const inputFormat = resolved;
 
     const warnings = analyzeEmail(source.html, framework);
     const scores = generateCompatibilityScore(warnings);
@@ -498,7 +505,7 @@ server.registerTool(
       format: inputFormat,
     });
 
-    const structural = structuralWarnings(warnings);
+    const structural = warnings.filter((w) => w.fixType === "structural");
 
     return {
       content: [
@@ -575,7 +582,7 @@ server.registerTool(
     inputSchema: {
       before: z.string().describe("Original email source"),
       after: z.string().describe("Modified email source, in the same format"),
-      format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle'. Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets."),
+      format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle' (HTML template or Vue single-file component). Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets. A pasted Vue file with no format is compiled as maizzle."),
     },
     annotations: {
       title: "Diff Emails",
@@ -596,7 +603,12 @@ server.registerTool(
     const afterSource = await toHtml(after, format);
     if (!afterSource.ok) return mcpError(afterSource.message);
 
-    const framework = toFramework(format);
+    const framework = toFramework(
+      resolveSourceFormat(before, format) === "maizzle" ||
+        resolveSourceFormat(after, format) === "maizzle"
+        ? (format ?? "maizzle")
+        : (format ?? "html"),
+    );
 
     const beforeWarnings = analyzeEmail(beforeSource.html, framework);
     const beforeScores = generateCompatibilityScore(beforeWarnings);

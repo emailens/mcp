@@ -41,14 +41,25 @@ function isMissingCompiler(message: string): boolean {
  * Compile `source` when `format` names a template language, or pass it through
  * when it is already HTML.
  */
+function isVueSfc(source: string): boolean {
+  return /<template[\s>]/i.test(source) && /<\/template>/i.test(source);
+}
+
+/** An omitted format on a Vue SFC is maizzle. An explicit format is kept. */
+export function resolveSourceFormat(source: string, format?: string): string {
+  if (format) return format;
+  return isVueSfc(source) ? "maizzle" : "html";
+}
+
 export async function toHtml(source: string, format?: string): Promise<SourceResult> {
-  if (!format || format === "html") return { ok: true, html: source };
-  if (!COMPILED.has(format)) {
-    return { ok: false, message: `Unknown format "${format}". Use html, jsx, mjml, or maizzle.` };
+  const resolved = resolveSourceFormat(source, format);
+  if (resolved === "html") return { ok: true, html: source };
+  if (!COMPILED.has(resolved)) {
+    return { ok: false, message: `Unknown format "${resolved}". Use html, jsx, mjml, or maizzle.` };
   }
 
   try {
-    return { ok: true, html: await compile(source, format as "jsx" | "mjml" | "maizzle") };
+    return { ok: true, html: await compile(source, resolved as "jsx" | "mjml" | "maizzle") };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     if (isMissingCompiler(message)) {

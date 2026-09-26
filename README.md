@@ -249,8 +249,9 @@ Requires Dev plan ($9/mo). Share links expire after 7 days (Dev) or never (Pro).
 ## Template formats
 
 `format` accepts `html` (the default), `mjml`, `maizzle` and `jsx` (React
-Email). Anything but `html` is compiled before analysis and also decides the
-syntax the fix snippets come back in.
+Email). `maizzle` is an HTML template or a Vue single-file component. A pasted
+Vue file with no `format` is compiled as `maizzle`. Anything but `html` is
+compiled before analysis and also decides the syntax the fix snippets come back in.
 
 Compiling matters more than it sounds. An email client renders the *output*, so
 that is what has to be checked: handed a raw `<mjml>` document, an HTML parser
@@ -263,7 +264,8 @@ dependencies:
 
 ```bash
 npm install mjml                                              # MJML
-npm install @maizzle/framework                                # Maizzle
+npm install @maizzle/framework@5                             # Maizzle HTML
+npm install @maizzle/framework@6                             # Maizzle Vue single-file components
 npm install sucrase react @react-email/components @react-email/render  # React Email
 ```
 

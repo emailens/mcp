@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import * as engine from "@emailens/engine";
 import { analyzeEmail } from "@emailens/engine";
 import { toHtml } from "../src/compile";
 
@@ -74,5 +75,19 @@ describe("getting a template to HTML first", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.message).toContain("handlebars");
+  });
+
+  test("a Vue SFC with no format is compiled as maizzle", async () => {
+    const vue = await toHtml("<template><p>Hi</p></template>");
+    expect(vue.ok).toBe(false);
+    if (vue.ok) return;
+    expect(vue.message).toMatch(/@maizzle\/framework/);
+
+    const html = await toHtml("<html><body><p>Hi</p></body></html>");
+    expect(html).toEqual({ ok: true, html: "<html><body><p>Hi</p></body></html>" });
+  }, 60_000);
+
+  test("warningsForClient is gone", () => {
+    expect("warningsForClient" in engine).toBe(false);
   });
 });
