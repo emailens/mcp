@@ -30,6 +30,13 @@ function toFramework(format?: string): Framework | undefined {
   return undefined;
 }
 
+/** The headline is the worst client. A mean of 21 clients hides the one that fails. */
+function worstScore(scores: Record<string, { score: number }>): number {
+  const values = Object.values(scores);
+  if (values.length === 0) return 0;
+  return Math.min(...values.map((s) => s.score));
+}
+
 /**
  * The language the source is written in.
  *
@@ -176,7 +183,7 @@ function validateHtmlSize(html: string) {
 
 const server = new McpServer({
   name: "emailens",
-  version: "0.9.0",
+  version: "0.9.1",
 });
 
 // ── Local Tool: preview_email ──────────────────────────────────────
@@ -238,11 +245,7 @@ server.registerTool(
       darkMode[t.clientId] = simulateDarkMode(source.html, t.clientId);
     }
 
-    const scoreValues = Object.values(scores);
-    const overallScore =
-      scoreValues.length > 0
-        ? Math.round(scoreValues.reduce((a, b) => a + b.score, 0) / scoreValues.length)
-        : 0;
+    const overallScore = worstScore(scores);
 
     const plainText = toPlainText(source.html);
 
@@ -321,11 +324,7 @@ server.registerTool(
     // reported, not silently change what the email scores.
     const scores = generateCompatibilityScore(warnings);
 
-    const scoreValues = Object.values(scores);
-    const overallScore =
-      scoreValues.length > 0
-        ? Math.round(scoreValues.reduce((a, b) => a + b.score, 0) / scoreValues.length)
-        : 0;
+    const overallScore = worstScore(scores);
 
     return {
       content: [
@@ -389,11 +388,7 @@ server.registerTool(
     });
     const report = session.audit({ skip });
 
-    const scoreValues = Object.values(report.compatibility.scores);
-    const overallCompatibility =
-      scoreValues.length > 0
-        ? Math.round(scoreValues.reduce((a, b) => a + b.score, 0) / scoreValues.length)
-        : 0;
+    const overallCompatibility = worstScore(report.compatibility.scores);
 
     return {
       content: [

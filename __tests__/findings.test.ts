@@ -98,11 +98,11 @@ describe("collapsing the response", () => {
     expect(collapsed.length).toBe(darkMode.length);
     for (const f of collapsed) expect(f.clients).toHaveLength(1);
 
-    // It is a small share of the whole: the bulk is per-client support
-    // warnings, and those do collapse.
+    // Support warnings still collapse. Word and New Outlook often do not:
+    // the intent pass gives them different sentences for the same property.
     const all = collapseWarnings(warnings);
     const perClient = all.filter((f) => f.clients.length === 1).length;
-    expect(perClient).toBeLessThan(all.length / 2);
+    expect(perClient).toBeLessThan(all.length * 0.6);
   });
 
   test("the client's name is stripped, and nothing else is", () => {

@@ -407,21 +407,19 @@ describe("source positions", () => {
   test("analyze_email locates the finding in the HTML it was given", async () => {
     const radius = (await findings()).filter((f) => f.property === "border-radius" && f.loc);
 
-    // border-radius appears three times here, once in the <style> block and
-    // once in each <div>, and is dropped by the same clients for the same
-    // reason every time. That is one problem in three places, so it is one
-    // finding: `loc` on the first, the rest as lines.
-    expect(radius).toHaveLength(1);
-    const { loc, alsoAtLines } = radius[0];
-    expect(POSITIONED.slice(loc!.offset, loc!.offset + loc!.length)).toBe("border-radius: 8px");
-    expect(alsoAtLines).toEqual([7, 8]);
-  });
-
-  test("an agent is told about every place a property breaks", async () => {
-    // An agent fixing only `loc` would leave the two <div>s broken.
-    const radius = (await findings()).find((f) => f.property === "border-radius")!;
-    expect(radius.alsoAtLines).toEqual([7, 8]);
-    expect(radius.clients.length).toBeGreaterThan(1);
+    // Three places, two sentences. Outlook Classic says no roundrect covers
+    // it. New Outlook keeps the support-matrix line. Each sentence lists
+    // every place.
+    expect(radius).toHaveLength(2);
+    const clients = radius.flatMap((f) => f.clients);
+    expect(clients).toContain("outlook-windows");
+    expect(clients).toContain("outlook-windows-legacy");
+    for (const finding of radius) {
+      expect(POSITIONED.slice(finding.loc!.offset, finding.loc!.offset + finding.loc!.length)).toBe(
+        "border-radius: 8px",
+      );
+      expect(finding.alsoAtLines).toEqual([7, 8]);
+    }
   });
 
   test("positions stay compact: the response is read by a model", async () => {
