@@ -6,9 +6,9 @@
 
 - **`overallScore` and `overallCompatibility` are the worst client.** The mean
   of 21 clients hid a single failure. The per-client maps are unchanged.
-- **Requires engine >=0.14.1.** A loss a fallback still covers no longer moves
-  the number. Outlook Classic and New Outlook can now carry different
-  sentences for the same property, so they stay separate findings.
+- **Requires engine >=0.14.2.** A loss a fallback still covers no longer moves
+  the number. Outlook Classic and New Outlook can carry different sentences
+  for the same property, so they stay separate findings.
 
 ## 0.9.0 - 2026-09-22
 

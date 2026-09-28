@@ -28,7 +28,7 @@
     "prepublishOnly": "bun run build"
   },
   "dependencies": {
-    "@emailens/engine": "^0.14.1",
+    "@emailens/engine": "^0.14.2",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "zod": "^3.25.76"
   },
