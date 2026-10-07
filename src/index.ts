@@ -183,7 +183,7 @@ function validateHtmlSize(html: string) {
 
 const server = new McpServer({
   name: "emailens",
-  version: "0.9.1",
+  version: "0.10.0",
 });
 
 // ── Local Tool: preview_email ──────────────────────────────────────
@@ -868,6 +868,206 @@ server.registerTool(
             null,
             2,
           ),
+        },
+      ],
+    };
+  },
+);
+
+// ── Hosted Tool: sandbox_get_inbox ──────────────────────────────────
+
+server.registerTool(
+  "sandbox_get_inbox",
+  {
+    title: "Get Sandbox Inbox",
+    description:
+      "Get your active Emailens sandbox test address (or create a new one). Send emails here via SMTP (smtp.emailens.dev:2525) or inbound domain routing. Requires EMAILENS_API_KEY.",
+    inputSchema: {
+      name: z.string().optional().describe("Optional inbox name (e.g. 'Auth E2E Test')"),
+    },
+    annotations: {
+      title: "Get Sandbox Inbox",
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+  },
+  async ({ name }) => {
+    if (!config.isHosted) {
+      return noApiKeyError("sandbox_get_inbox", "Email sandboxing requires an Emailens account and API key.");
+    }
+
+    const result = await apiRequest<{
+      inbox?: { id: string; name: string; createdAt: string; lastReceivedAt: string | null };
+      address?: string;
+    }>("/api/sandbox/v1/inbox", {
+      apiKey: config.apiKey!,
+      apiUrl: config.apiUrl,
+    });
+
+    if (result.isError) {
+      return mcpError(result.error!);
+    }
+
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify(result.data, null, 2),
+        },
+      ],
+    };
+  },
+);
+
+// ── Hosted Tool: sandbox_wait_for_email ─────────────────────────────
+
+server.registerTool(
+  "sandbox_wait_for_email",
+  {
+    title: "Wait for Sandbox Email",
+    description:
+      "Poll and wait for a matching incoming test email in the sandbox. Automatically extracts 4-8 digit OTP codes and action links for zero-regex test assertions. Requires EMAILENS_API_KEY.",
+    inputSchema: {
+      inboxId: z.string().optional().describe("Optional inbox ID filter"),
+      subject: z.string().optional().describe("Substring match for email subject (case-insensitive)"),
+      sender: z.string().optional().describe("Substring match for sender address (case-insensitive)"),
+      timeoutSeconds: z.number().optional().describe("Max seconds to wait (default: 30, max: 60)"),
+    },
+    annotations: {
+      title: "Wait for Sandbox Email",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+  },
+  async ({ inboxId, subject, sender, timeoutSeconds = 30 }) => {
+    if (!config.isHosted) {
+      return noApiKeyError("sandbox_wait_for_email", "Email sandboxing requires an Emailens account and API key.");
+    }
+
+    const params = new URLSearchParams();
+    if (inboxId) params.set("inboxId", inboxId);
+    if (subject) params.set("subject", subject);
+    if (sender) params.set("sender", sender);
+    params.set("timeout", String(timeoutSeconds));
+
+    const result = await apiRequest<{
+      message: {
+        id: string;
+        subject: string;
+        sender: string;
+        otp?: string | null;
+        actionUrl?: string | null;
+        links?: Array<{ href: string; text?: string }>;
+        receivedAt: string;
+      };
+    }>(`/api/sandbox/v1/messages/wait?${params.toString()}`, {
+      apiKey: config.apiKey!,
+      apiUrl: config.apiUrl,
+      timeoutMs: (timeoutSeconds + 5) * 1000,
+    });
+
+    if (result.isError) {
+      return mcpError(result.error!);
+    }
+
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify(result.data?.message ?? result.data, null, 2),
+        },
+      ],
+    };
+  },
+);
+
+// ── Hosted Tool: sandbox_list_messages ──────────────────────────────
+
+server.registerTool(
+  "sandbox_list_messages",
+  {
+    title: "List Sandbox Messages",
+    description:
+      "List recently received test emails in your sandbox inboxes. Requires EMAILENS_API_KEY.",
+    inputSchema: {
+      inboxId: z.string().optional().describe("Optional inbox ID filter"),
+    },
+    annotations: {
+      title: "List Sandbox Messages",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+  },
+  async ({ inboxId }) => {
+    if (!config.isHosted) {
+      return noApiKeyError("sandbox_list_messages", "Email sandboxing requires an Emailens account and API key.");
+    }
+
+    const params = inboxId ? `?inboxId=${encodeURIComponent(inboxId)}` : "";
+    const result = await apiRequest<{ messages: unknown[] }>(`/api/sandbox/messages${params}`, {
+      apiKey: config.apiKey!,
+      apiUrl: config.apiUrl,
+    });
+
+    if (result.isError) {
+      return mcpError(result.error!);
+    }
+
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify(result.data, null, 2),
+        },
+      ],
+    };
+  },
+);
+
+// ── Hosted Tool: sandbox_get_message ────────────────────────────────
+
+server.registerTool(
+  "sandbox_get_message",
+  {
+    title: "Get Sandbox Message",
+    description:
+      "Get complete captured email details including HTML/text parts, extracted OTP, magic links, headers, and spam analysis. Requires EMAILENS_API_KEY.",
+    inputSchema: {
+      messageId: z.string().describe("ID of the sandbox message"),
+    },
+    annotations: {
+      title: "Get Sandbox Message",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+  },
+  async ({ messageId }) => {
+    if (!config.isHosted) {
+      return noApiKeyError("sandbox_get_message", "Email sandboxing requires an Emailens account and API key.");
+    }
+
+    const result = await apiRequest<{ message: unknown }>(`/api/sandbox/messages/${encodeURIComponent(messageId)}`, {
+      apiKey: config.apiKey!,
+      apiUrl: config.apiUrl,
+    });
+
+    if (result.isError) {
+      return mcpError(result.error!);
+    }
+
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify(result.data, null, 2),
         },
       ],
     };
