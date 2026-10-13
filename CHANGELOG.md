@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.10.1 - 2026-10-13
+
+### Fixed
+
+- **Hosted tools reach the API with their key again.** The default API address
+  was `https://emailens.dev`, which now redirects `/api/*` to
+  `app.emailens.dev`. A redirect to another host drops the `Authorization`
+  header, so every key-based tool failed as "invalid or revoked API key". The
+  default is now `https://app.emailens.dev`. `EMAILENS_API_URL` still
+  overrides it.
+- **The remote endpoint in the README** is `https://app.emailens.dev/api/mcp`.
+  If your client config still points at `https://emailens.dev/api/mcp`, change
+  it.
+
 ## 0.9.1 - 2026-09-28
 
 ### Changed

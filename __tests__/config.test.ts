@@ -12,7 +12,7 @@ describe("config", () => {
     delete process.env.EMAILENS_API_KEY;
     delete process.env.EMAILENS_API_URL;
     expect(config.apiKey).toBeNull();
-    expect(config.apiUrl).toBe("https://emailens.dev");
+    expect(config.apiUrl).toBe("https://app.emailens.dev");
     expect(config.isHosted).toBe(false);
   });
 

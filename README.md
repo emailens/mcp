@@ -79,7 +79,7 @@ Use the hosted endpoint: no npm or Node.js needed. API key required.
 {
   "mcpServers": {
     "emailens": {
-      "url": "https://emailens.dev/api/mcp",
+      "url": "https://app.emailens.dev/api/mcp",
       "headers": {
         "Authorization": "Bearer ek_live_..."
       }
