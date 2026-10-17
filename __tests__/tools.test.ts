@@ -407,13 +407,11 @@ describe("source positions", () => {
   test("analyze_email locates the finding in the HTML it was given", async () => {
     const radius = (await findings()).filter((f) => f.property === "border-radius" && f.loc);
 
-    // Three places, two sentences. Outlook Classic says no roundrect covers
-    // it. New Outlook keeps the support-matrix line. Each sentence lists
-    // every place.
-    expect(radius).toHaveLength(2);
-    const clients = radius.flatMap((f) => f.clients);
-    expect(clients).toContain("outlook-windows");
-    expect(clients).toContain("outlook-windows-legacy");
+    // Three places, one sentence: Outlook Classic, where no roundrect covers
+    // it. (New Outlook draws border-radius; since engine 0.14.x it is no
+    // longer reported there.) The sentence lists every place.
+    expect(radius).toHaveLength(1);
+    expect(radius[0].clients).toEqual(["outlook-windows-legacy"]);
     for (const finding of radius) {
       expect(POSITIONED.slice(finding.loc!.offset, finding.loc!.offset + finding.loc!.length)).toBe(
         "border-radius: 8px",
@@ -433,9 +431,11 @@ describe("source positions", () => {
     const data = parseToolJson(result) as {
       warnings: Array<{ client: string; property: string; fix?: unknown }>;
     };
+    // Per selector and per client, with the fix snippets the collapsed shape
+    // leaves out: a stylesheet rule and two inline styles.
     const radius = data.warnings.filter((w) => w.property === "border-radius");
     expect(radius.length).toBeGreaterThan(1);
-    expect(new Set(radius.map((w) => w.client)).size).toBeGreaterThan(1);
+    expect(radius.every((w) => w.client === "outlook-windows-legacy")).toBe(true);
     expect(radius.some((w) => w.fix)).toBe(true);
   });
 
@@ -491,5 +491,17 @@ describe("source positions", () => {
     if (result.isError) return; // mjml peer dep not installed in this environment
     const data = parseToolJson(result) as { findings: Array<{ loc?: unknown }> };
     expect(data.findings.every((f) => !f.loc)).toBe(true);
+  });
+});
+
+describe("fix_email carries the Outlook Classic rules", () => {
+  test("an Outlook Classic finding brings the patterns that fix it", async () => {
+    const html =
+      '<!DOCTYPE html><html><body><table style="background:#eee;border-radius:10px"><tr><td>Hi</td></tr></table></body></html>';
+    const result = await callTool("fix_email", { html });
+    const text = result.content.map((c) => c.text).join("\n");
+    expect(text).toContain("## Outlook Classic rules");
+    // A card that holds VML gets corner cells, not a shape around it.
+    expect(text).toContain("corner cells");
   });
 });

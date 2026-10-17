@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.11.0 - 2026-10-17
+
+### Changed
+
+- **Engine 0.15.0** (was 0.14.2). `fix_email` now appends the Outlook Classic
+  rules whenever Outlook Classic has findings: bulletproof buttons, VML
+  picture fills, corner cells for a card that holds VML (a shape around it
+  hides the buttons and pictures inside), arcsize over half the shorter side,
+  a fixed 600px wrapper, padding on cells, `<wbr>` for long URLs and an
+  `mso-hide` preheader. Advice in `analyze_email` follows the element: a
+  rounded button, picture and card get different fixes.
+- **Fewer false findings on React Email**: its preheader and its button's
+  Outlook spacers no longer cost Outlook Classic points, and `<wbr>` is no
+  longer a warning. New Outlook is no longer reported for `border-radius`,
+  which it draws.
+
 ## 0.10.1 - 2026-10-13
 
 ### Fixed
