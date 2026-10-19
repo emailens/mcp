@@ -176,6 +176,31 @@ describe("audit_email", () => {
     expect(rules).toContain("vml-arcsize-range");
   });
 
+  test("emailType:'transactional' drops the unsubscribe finding a receipt does not need", async () => {
+    const RECEIPT = `<!DOCTYPE html><html><body><p>Your receipt LS-20481. Total $80.</p></body></html>`;
+    const rules = async (args: Record<string, unknown>) =>
+      ((parseToolJson(await callTool("audit_email", { html: RECEIPT, ...args })) as {
+        spam: { issues: Array<{ rule: string }> };
+      }).spam.issues.map((i) => i.rule));
+    expect(await rules({ emailType: "marketing" })).toContain("missing-unsubscribe");
+    expect(await rules({ emailType: "transactional" })).not.toContain("missing-unsubscribe");
+  });
+
+  test("responsive and dark-mode CSS is info, not something to fix", async () => {
+    const RESPONSIVE = `<!DOCTYPE html><html><head><style>
+      @media (max-width:600px){.c{width:100%!important}}
+      @media (prefers-color-scheme:dark){.c{background:#000!important}}
+    </style></head><body><table class="c"><tr><td>hi</td></tr></table></body></html>`;
+    const data = parseToolJson(await callTool("audit_email", { html: RESPONSIVE })) as {
+      compatibility: { findings: Array<{ property: string; severity: string }> };
+    };
+    const enhancement = data.compatibility.findings.filter((f) =>
+      ["<style>", "@media", "@media prefers-color-scheme"].includes(f.property),
+    );
+    expect(enhancement.length).toBeGreaterThan(0);
+    expect(enhancement.every((f) => f.severity === "info")).toBe(true);
+  });
+
   test("skip:['vml'] omits the VML section", async () => {
     const skipped = parseToolJson(
       await callTool("audit_email", { html: NESTED_VML, skip: ["vml"] }),

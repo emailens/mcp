@@ -184,6 +184,9 @@ The last three cover what a light desktop preview cannot show: text that disappe
 | `clients` | string[] | No | Only report these client IDs |
 | `skip` | string[] | No | Checks to skip (e.g. `["spam", "images"]`) |
 | `targetingPolicy` | enum | No | `"progressive"` (default), `"strict"`, or `"lenient"` |
+| `emailType` | enum | No | `"transactional"` (no unsubscribe link required) or `"marketing"`. Omitted: guessed from the content |
+
+Fix `error` and `warning` findings. `info` findings are not problems: the email falls back safely there, so never remove responsive (`@media`) or dark-mode CSS to clear them.
 
 #### `fix_email`
 

@@ -293,7 +293,7 @@ server.registerTool(
   {
     title: "Analyze Email",
     description:
-      "Quick CSS compatibility analysis, returns per-client scores and one finding per problem, listing the clients it affects. For HTML input each finding carries loc (line, column, offset) and alsoAtLines, so you can edit the exact source. Narrow with clients, or pass detail:'full' for the per-client breakdown with fix snippets. Use audit_email for a full quality report (spam, links, a11y, images, etc.).",
+      "Fix error and warning findings. Info findings are not problems (the email falls back safely there): never remove responsive (@media) or dark-mode CSS to clear them. Quick CSS compatibility analysis, returns per-client scores and one finding per problem, listing the clients it affects. For HTML input each finding carries loc (line, column, offset) and alsoAtLines, so you can edit the exact source. Narrow with clients, or pass detail:'full' for the per-client breakdown with fix snippets. Use audit_email for a full quality report (spam, links, a11y, images, etc.).",
     inputSchema: {
       html: z.string().describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so"),
       format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle' (HTML template or Vue single-file component). Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets. A pasted Vue file with no format is compiled as maizzle."),
@@ -354,7 +354,7 @@ server.registerTool(
   {
     title: "Audit Email",
     description:
-      "Comprehensive email quality audit: CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), template variables, content overflow, visual fallbacks, dark-mode and mobile text contrast, design consistency, structural faults in Outlook-only VML (which lives inside conditional comments and is invisible to every other check), style survival: CSS a client parses correctly and then discards, such as a stylesheet past Gmail's 16 KB ceiling or every rule after a `}}`, which no support matrix can express, and client targeting: HowToTarget hacks such as Gmail u+.body or MSO conditionals, which do not score as css-hack. For HTML input, findings tied to a specific element carry loc (line, column, offset) so you can edit the exact source. Compatibility is collapsed to one finding per problem listing the clients it affects; pass detail:'full' for the per-client breakdown with fix snippets. Use skip to omit checks, targetingPolicy to change how targeted scopes affect scores, and clients to narrow which clients are reported.",
+      "Fix error and warning findings. Info findings are not problems (the email falls back safely there): never remove responsive (@media) or dark-mode CSS to clear them. Comprehensive email quality audit: CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), template variables, content overflow, visual fallbacks, dark-mode and mobile text contrast, design consistency, structural faults in Outlook-only VML (which lives inside conditional comments and is invisible to every other check), style survival: CSS a client parses correctly and then discards, such as a stylesheet past Gmail's 16 KB ceiling or every rule after a `}}`, which no support matrix can express, and client targeting: HowToTarget hacks such as Gmail u+.body or MSO conditionals, which do not score as css-hack. For HTML input, findings tied to a specific element carry loc (line, column, offset) so you can edit the exact source. Compatibility is collapsed to one finding per problem listing the clients it affects; pass detail:'full' for the per-client breakdown with fix snippets. Use skip to omit checks, targetingPolicy to change how targeted scopes affect scores, and clients to narrow which clients are reported.",
     inputSchema: {
       html: z.string().describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so"),
       format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle' (HTML template or Vue single-file component). Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets. A pasted Vue file with no format is compiled as maizzle."),
@@ -365,6 +365,10 @@ server.registerTool(
       detail: detailEnum,
       clients: clientsParam,
       targetingPolicy: targetingPolicyEnum,
+      emailType: z
+        .enum(["marketing", "transactional"])
+        .optional()
+        .describe("'transactional' (receipts, password resets, codes, alerts: no unsubscribe link required) or 'marketing'. Omitted: guessed from the content, which misses many transactional emails."),
     },
     annotations: {
       title: "Audit Email",
@@ -374,7 +378,7 @@ server.registerTool(
       openWorldHint: false,
     },
   },
-  async ({ html, format, skip, detail, clients, targetingPolicy }) => {
+  async ({ html, format, skip, detail, clients, targetingPolicy, emailType }) => {
     const sizeError = validateHtmlSize(html);
     if (sizeError) return sizeError;
     const clientError = validateClients(clients);
@@ -388,7 +392,7 @@ server.registerTool(
       positions: positionsApply(resolveSourceFormat(html, format)),
       targetingPolicy,
     });
-    const report = session.audit({ skip });
+    const report = session.audit({ skip, ...(emailType ? { spam: { emailType } } : {}) });
 
     const overallCompatibility = worstScore(report.compatibility.scores);
 
