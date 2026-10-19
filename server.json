@@ -21,7 +21,7 @@
       "environmentVariables": [
         {
           "name": "EMAILENS_API_KEY",
-          "description": "API key for screenshots and sharing. Get one free at emailens.dev/settings/api-keys",
+          "description": "API key for screenshots and sharing. Get one free at app.emailens.dev/dashboard/api",
           "isRequired": false,
           "isSecret": true
         }

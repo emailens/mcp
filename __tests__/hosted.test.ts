@@ -24,7 +24,7 @@ describe("apiRequest", () => {
     const result = await apiRequest("/api/preview", { apiKey: "ek_live_bad", apiUrl: "https://emailens.dev" });
     expect(result.isError).toBe(true);
     expect(result.error).toContain("Invalid or revoked API key");
-    expect(result.error).toContain("ref=mcp");
+    expect(result.error).toContain("utm_source=mcp");
   });
 
   test("maps 403 to plan upgrade error", async () => {
@@ -33,7 +33,7 @@ describe("apiRequest", () => {
     const result = await apiRequest("/api/share", { apiKey: "ek_live_abc123", apiUrl: "https://emailens.dev" });
     expect(result.isError).toBe(true);
     expect(result.error).toContain("upgrade");
-    expect(result.error).toContain("ref=mcp");
+    expect(result.error).toContain("utm_source=mcp");
   });
 
   test("maps 429 to quota exceeded error", async () => {
@@ -42,7 +42,7 @@ describe("apiRequest", () => {
     const result = await apiRequest("/api/preview", { apiKey: "ek_live_abc123", apiUrl: "https://emailens.dev" });
     expect(result.isError).toBe(true);
     expect(result.error).toContain("quota");
-    expect(result.error).toContain("ref=mcp");
+    expect(result.error).toContain("utm_source=mcp");
   });
 
   test("returns parsed JSON on 200", async () => {

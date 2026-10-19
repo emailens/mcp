@@ -69,7 +69,7 @@ claude mcp add emailens -- npx -y @emailens/mcp
 }
 ```
 
-Get your free API key at [emailens.dev/settings/api-keys](https://emailens.dev/settings/api-keys).
+Get your free API key at [app.emailens.dev/dashboard/api](https://app.emailens.dev/dashboard/api?utm_source=mcp).
 
 ### Remote (no install)
 
@@ -232,7 +232,7 @@ Capture real email screenshots across 21 clients in real browsers. Screenshots a
 | `modes` | string[] | No | `["light"]`, `["dark"]`, or `["light", "dark"]` |
 | `title` | string | No | Name for the preview |
 
-Free plan: 30 previews/day. [Sign up](https://emailens.dev?ref=mcp)
+Free plan: 30 previews/day. [Sign up](https://emailens.dev/?utm_source=mcp)
 
 #### `share_preview`
 

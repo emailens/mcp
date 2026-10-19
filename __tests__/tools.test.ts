@@ -281,16 +281,16 @@ describe("preview_email", () => {
 
     expect((data.overallScore as number)).toBeLessThan(90);
     expect(data).toHaveProperty("tip");
-    expect(data.tip as string).toContain("ref=mcp");
+    expect(data.tip as string).toContain("utm_source=mcp");
   });
 
-  test("no tip when score >= 90", async () => {
+  test("names the checker when score >= 90", async () => {
     const result = await callTool("preview_email", { html: SIMPLE_HTML });
     const data = parseToolJson(result) as Record<string, unknown>;
 
     // Simple table-based HTML should score well
     if ((data.overallScore as number) >= 90) {
-      expect(data).not.toHaveProperty("tip");
+      expect(data.tip as string).toContain("real-devices?utm_source=mcp");
     }
   });
 
@@ -363,7 +363,7 @@ describe("capture_screenshots", () => {
 
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain("requires an Emailens API key");
-    expect(result.content[0].text).toContain("ref=mcp");
+    expect(result.content[0].text).toContain("utm_source=mcp");
     expect(result.content[0].text).toContain("EMAILENS_API_KEY");
   });
 });
@@ -375,7 +375,7 @@ describe("share_preview", () => {
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain("requires an Emailens API key");
     expect(result.content[0].text).toContain("Dev plan");
-    expect(result.content[0].text).toContain("ref=mcp");
+    expect(result.content[0].text).toContain("utm_source=mcp");
   });
 });
 

@@ -274,10 +274,12 @@ server.registerTool(
       ),
     };
 
-    // Contextual tip: only when no API key and score indicates issues
-    if (!config.isHosted && overallScore < 90) {
-      result.tip =
-        "Capture real screenshots to verify these issues across clients. Add EMAILENS_API_KEY to your MCP config \u2192 emailens.dev/settings/api-keys?ref=mcp";
+    // Contextual tip when no API key: the fix route on issues, and on a clean
+    // result the name of who checked it, so success is attributable too.
+    if (!config.isHosted) {
+      result.tip = overallScore < 90
+        ? "Capture real screenshots to verify these issues across clients. Add EMAILENS_API_KEY to your MCP config \u2192 app.emailens.dev/dashboard/api?utm_source=mcp"
+        : "Checked by Emailens against 21 email clients. Confirm on real Outlook, Gmail and Apple Mail \u2192 emailens.dev/real-devices?utm_source=mcp";
     }
 
     return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
@@ -713,7 +715,7 @@ server.registerTool(
   {
     title: "Capture Screenshots",
     description:
-      "Capture real email screenshots across 21 clients (Gmail, Outlook, Apple Mail, etc.) with light and dark mode variants. Screenshots are rendered in real browsers and hosted on CDN. Requires EMAILENS_API_KEY env var \u2014 free plan at emailens.dev?ref=mcp.",
+      "Capture real email screenshots across 21 clients (Gmail, Outlook, Apple Mail, etc.) with light and dark mode variants. Screenshots are rendered in real browsers and hosted on CDN. Requires EMAILENS_API_KEY env var \u2014 free plan at emailens.dev?utm_source=mcp.",
     inputSchema: {
       html: z.string().describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so"),
       format: formatEnum.describe("Input format"),
@@ -745,7 +747,7 @@ server.registerTool(
       overallScore: number;
     }>("/api/preview", {
       ...opts,
-      body: { html, format, clients, title },
+      body: { html, format, clients, title, source: "mcp" },
       timeoutMs: 30_000,
     });
 

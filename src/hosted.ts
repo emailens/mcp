@@ -36,7 +36,7 @@ export async function apiRequest<T = unknown>(
     if (response.status === 401) {
       return {
         isError: true,
-        error: "Invalid or revoked API key. Generate a new one at emailens.dev/settings/api-keys?ref=mcp",
+        error: "Invalid or revoked API key. Generate a new one at app.emailens.dev/dashboard/api?utm_source=mcp",
       };
     }
 
@@ -45,8 +45,8 @@ export async function apiRequest<T = unknown>(
       return {
         isError: true,
         error: data.upgrade
-          ? "This feature requires a plan upgrade. Visit emailens.dev/pricing?ref=mcp"
-          : "Access denied. Check your plan at emailens.dev/pricing?ref=mcp",
+          ? "This feature requires a plan upgrade. Visit emailens.dev/pricing?utm_source=mcp"
+          : "Access denied. Check your plan at emailens.dev/pricing?utm_source=mcp",
       };
     }
 
@@ -54,7 +54,7 @@ export async function apiRequest<T = unknown>(
       const data = (await response.json().catch(() => ({}))) as Record<string, number>;
       return {
         isError: true,
-        error: `Daily quota exceeded${data.limit ? ` (${data.limit - (data.remaining ?? 0)}/${data.limit})` : ""}. Resets tomorrow. Upgrade at emailens.dev/pricing?ref=mcp`,
+        error: `Daily quota exceeded${data.limit ? ` (${data.limit - (data.remaining ?? 0)}/${data.limit})` : ""}. Resets tomorrow. Upgrade at emailens.dev/pricing?utm_source=mcp`,
       };
     }
 
@@ -86,8 +86,8 @@ export function noApiKeyError(toolName: string, extraInfo?: string) {
   const lines = [
     `${toolName} requires an Emailens API key.`,
     "",
-    "1. Sign up free at emailens.dev?ref=mcp",
-    "2. Create a key at emailens.dev/settings/api-keys?ref=mcp",
+    "1. Sign up free at emailens.dev?utm_source=mcp",
+    "2. Create a key at app.emailens.dev/dashboard/api?utm_source=mcp",
     "3. Add to your MCP config:",
     "",
     '   "env": { "EMAILENS_API_KEY": "ek_live_..." }',
