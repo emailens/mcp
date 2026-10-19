@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.12.0 - 2026-10-19
+
+### Added
+
+- **`emailType` on `audit_email`**: `"transactional"` or `"marketing"`,
+  passed to the spam check. A receipt or password reset marked transactional
+  is no longer told to add an unsubscribe link. Omitted, the type is guessed
+  from the content, which misses many transactional emails.
+
+### Changed
+
+- **Engine 0.16.0** (was 0.15.0). Resets (`outline: none`,
+  `word-spacing: normal`, `height: auto`, ...) are no longer findings, and
+  `@media`, `prefers-color-scheme`, `color-scheme` and partial `<style>`
+  support are info: the clients without them fall back to the intended
+  layout. Scores rise for most emails. ESP unsubscribe and preference
+  placeholders in an `href` are info, and `fix_email`'s prompt tells the agent
+  to leave info findings alone.
+- **`audit_email` and `analyze_email` say what to fix**: errors and warnings.
+  Agents told to fix every finding used to delete their responsive and
+  dark-mode CSS to clear what are now info findings.
+- **Links that resolve, with attribution the site reads.** The API-key link
+  goes to `app.emailens.dev/dashboard/api` (the old one was a 404), links carry
+  `utm_source=mcp` instead of `ref=mcp`, hosted previews are recorded with
+  `source: "mcp"`, and `preview_email` without a key names the checker and
+  points to real-device checks.
+
 ## 0.11.0 - 2026-10-17
 
 ### Changed
