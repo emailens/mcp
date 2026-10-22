@@ -185,6 +185,7 @@ The last three cover what a light desktop preview cannot show: text that disappe
 | `skip` | string[] | No | Checks to skip (e.g. `["spam", "images"]`) |
 | `targetingPolicy` | enum | No | `"progressive"` (default), `"strict"`, or `"lenient"` |
 | `emailType` | enum | No | `"transactional"` (no unsubscribe link required) or `"marketing"`. Omitted: guessed from the content |
+| `previousHtml` | string | No | The design to hold this version to, usually your first draft. Omitted: the first version of this email audited in the session. What the edits removed comes back as `designRemovals` |
 
 Fix `error` and `warning` findings. `info` findings are not problems: the email falls back safely there, so never remove responsive (`@media`) or dark-mode CSS to clear them.
 

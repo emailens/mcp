@@ -201,6 +201,23 @@ describe("audit_email", () => {
     expect(enhancement.every((f) => f.severity === "info")).toBe(true);
   });
 
+  test("a revision that deletes the design reports it, held to the first draft", async () => {
+    const draft = `<!DOCTYPE html><html><head><title>Retention draft</title><style>
+      @media (max-width:600px){.c{width:100%!important}}
+      @media (prefers-color-scheme:dark){.c{background:#000!important}}
+    </style></head><body><table class="c" style="border-radius:12px"><tr><td>Your weekly retention summary is ready</td></tr></table></body></html>`;
+    const flat = draft.replace(/<style>[\s\S]*?<\/style>/, "").replace("border-radius:12px", "");
+    const removals = async (args: Record<string, unknown>) =>
+      ((parseToolJson(await callTool("audit_email", args)) as { designRemovals: Array<{ feature: string }> })
+        .designRemovals.map((r) => r.feature).sort());
+    expect(await removals({ html: draft })).toEqual([]);
+    // No previousHtml: the server remembers the draft by title and text.
+    expect(await removals({ html: flat })).toEqual(["darkMode", "responsive", "rounded"]);
+    // Another email with the same title is not a revision of it.
+    expect(await removals({ html: flat.replace("Your weekly retention summary is ready", "Totally different invoice body text here") })).toEqual([]);
+    expect(await removals({ html: flat, previousHtml: flat })).toEqual([]);
+  });
+
   test("skip:['vml'] omits the VML section", async () => {
     const skipped = parseToolJson(
       await callTool("audit_email", { html: NESTED_VML, skip: ["vml"] }),
@@ -522,7 +539,8 @@ describe("source positions", () => {
 describe("fix_email carries the Outlook Classic rules", () => {
   test("an Outlook Classic finding brings the patterns that fix it", async () => {
     const html =
-      '<!DOCTYPE html><html><body><table style="background:#eee;border-radius:10px"><tr><td>Hi</td></tr></table></body></html>';
+      // A square corner alone is info since engine 0.16.4; the <a> padding still needs fixing.
+      '<!DOCTYPE html><html><body><table style="background:#eee;border-radius:10px"><tr><td><a href="https://x.dev" style="padding:12px 24px">Hi</a></td></tr></table></body></html>';
     const result = await callTool("fix_email", { html });
     const text = result.content.map((c) => c.text).join("\n");
     expect(text).toContain("## Outlook Classic rules");

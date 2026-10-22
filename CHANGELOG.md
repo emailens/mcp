@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.12.1 - 2026-10-22
+
+### Added
+
+- **`audit_email` reports design the edits removed** (`designRemovals`). An
+  agent linting its email could score 100 by deleting what a client drops:
+  in the coding-agent benchmark, models deleted `@media`, dark mode and
+  rounded corners for every client to clear one client's finding. Each audit
+  is now compared with the first version of the same email audited in the
+  session (matched by `<title>` and its text, kept in memory) and lists
+  features that are gone or halved, with "restore them". `previousHtml` sets
+  the comparison explicitly. The tool description puts restoring them next to
+  fixing errors and warnings.
+
+### Changed
+
+- **Engine 0.16.4** (was 0.16.0). A `border-radius` no `v:roundrect` covers
+  is info in Outlook Classic: square corners are the fallback, and agents
+  were deleting the radius everywhere to clear the warning.
+
 ## 0.12.0 - 2026-10-19
 
 ### Added

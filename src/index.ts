@@ -14,6 +14,7 @@ import {
   estimateAiFixTokens,
   diffResults,
   toPlainText,
+  checkDesignRetention,
   EMAIL_CLIENTS,
   MAX_HTML_SIZE,
   type Framework,
@@ -23,6 +24,7 @@ import {
 // Lazy-imported: @emailens/engine/server may not exist in all engine versions
 let _checkDeliverability: ((domain: string) => Promise<unknown>) | null = null;
 import { config } from "./config.js";
+import { firstDraft } from "./drafts.js";
 import { apiRequest, mcpError, noApiKeyError } from "./hosted.js";
 
 function toFramework(format?: string): Framework | undefined {
@@ -183,7 +185,7 @@ function validateHtmlSize(html: string) {
 
 const server = new McpServer({
   name: "emailens",
-  version: "0.12.0",
+  version: "0.12.1",
 });
 
 // ── Local Tool: preview_email ──────────────────────────────────────
@@ -354,7 +356,7 @@ server.registerTool(
   {
     title: "Audit Email",
     description:
-      "Fix error and warning findings. Info findings are not problems (the email falls back safely there): never remove responsive (@media) or dark-mode CSS to clear them. Comprehensive email quality audit: CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), template variables, content overflow, visual fallbacks, dark-mode and mobile text contrast, design consistency, structural faults in Outlook-only VML (which lives inside conditional comments and is invisible to every other check), style survival: CSS a client parses correctly and then discards, such as a stylesheet past Gmail's 16 KB ceiling or every rule after a `}}`, which no support matrix can express, and client targeting: HowToTarget hacks such as Gmail u+.body or MSO conditionals, which do not score as css-hack. For HTML input, findings tied to a specific element carry loc (line, column, offset) so you can edit the exact source. Compatibility is collapsed to one finding per problem listing the clients it affects; pass detail:'full' for the per-client breakdown with fix snippets. Use skip to omit checks, targetingPolicy to change how targeted scopes affect scores, and clients to narrow which clients are reported.",
+      "Fix error and warning findings, and restore anything listed in designRemovals. Info findings are not problems (the email falls back safely there): never remove responsive (@media), dark-mode CSS or rounded corners to clear them. designRemovals compares this version with the first one audited for the same email (or with previousHtml): design the edits deleted, such as @media rules, dark mode, corners, gradients, VML fallbacks or images. Comprehensive email quality audit: CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), template variables, content overflow, visual fallbacks, dark-mode and mobile text contrast, design consistency, structural faults in Outlook-only VML (which lives inside conditional comments and is invisible to every other check), style survival: CSS a client parses correctly and then discards, such as a stylesheet past Gmail's 16 KB ceiling or every rule after a `}}`, which no support matrix can express, and client targeting: HowToTarget hacks such as Gmail u+.body or MSO conditionals, which do not score as css-hack. For HTML input, findings tied to a specific element carry loc (line, column, offset) so you can edit the exact source. Compatibility is collapsed to one finding per problem listing the clients it affects; pass detail:'full' for the per-client breakdown with fix snippets. Use skip to omit checks, targetingPolicy to change how targeted scopes affect scores, and clients to narrow which clients are reported.",
     inputSchema: {
       html: z.string().describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so"),
       format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle' (HTML template or Vue single-file component). Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets. A pasted Vue file with no format is compiled as maizzle."),
@@ -369,6 +371,10 @@ server.registerTool(
         .enum(["marketing", "transactional"])
         .optional()
         .describe("'transactional' (receipts, password resets, codes, alerts: no unsubscribe link required) or 'marketing'. Omitted: guessed from the content, which misses many transactional emails."),
+      previousHtml: z
+        .string()
+        .optional()
+        .describe("The design to hold this version to, usually your first draft. Omitted: the first version of this email audited in this session (matched by <title> and text)."),
     },
     annotations: {
       title: "Audit Email",
@@ -378,7 +384,7 @@ server.registerTool(
       openWorldHint: false,
     },
   },
-  async ({ html, format, skip, detail, clients, targetingPolicy, emailType }) => {
+  async ({ html, format, skip, detail, clients, targetingPolicy, emailType, previousHtml }) => {
     const sizeError = validateHtmlSize(html);
     if (sizeError) return sizeError;
     const clientError = validateClients(clients);
@@ -395,6 +401,8 @@ server.registerTool(
     const report = session.audit({ skip, ...(emailType ? { spam: { emailType } } : {}) });
 
     const overallCompatibility = worstScore(report.compatibility.scores);
+    const baseline = previousHtml ? (await toHtml(previousHtml, format)) : { ok: true as const, html: firstDraft(source.html) };
+    const designRemovals = baseline.ok ? checkDesignRetention(baseline.html, source.html) : [];
 
     return {
       content: [
@@ -403,6 +411,7 @@ server.registerTool(
           text: JSON.stringify(
             {
               overallCompatibility,
+              designRemovals,
               compatibility: {
                 scores: report.compatibility.scores,
                 ...compatibilityPayload(report.compatibility.warnings, detail, clients),
