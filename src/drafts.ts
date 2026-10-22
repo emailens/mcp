@@ -4,14 +4,18 @@
  * draft back, so the server remembers it.
  *
  * Matched by <title> and then by text, because an agent rewrites markup but
- * keeps the words: a revision shares most of its text with the draft, another
- * email with the same title (a product name) does not.
+ * keeps the words: a revision shares nearly all its text with the draft,
+ * another email with the same title (often just the product name) does not.
+ * A revision that rewrites the copy becomes a new draft: a missed comparison,
+ * never a false one.
  * ponytail: in-memory, per process, capped; lost on restart, which only means
  * the next audit becomes the draft.
  */
 
 const MAX_DRAFTS = 200;
-const SAME_EMAIL = 0.5;
+// Jaccard on words. Measured on the benchmark (359 emails, one title for all):
+// two different emails of one product reach 0.48, a fix revision keeps ~all.
+const SAME_EMAIL = 0.7;
 const drafts = new Map<string, { words: Set<string>; html: string }[]>();
 
 function title(html: string): string {
@@ -31,7 +35,7 @@ function overlap(a: Set<string>, b: Set<string>): number {
   if (!a.size || !b.size) return 0;
   let shared = 0;
   for (const w of a) if (b.has(w)) shared++;
-  return shared / Math.min(a.size, b.size);
+  return shared / (a.size + b.size - shared);
 }
 
 /** The draft this html revises, or this html itself when it is a new email. */
@@ -39,14 +43,11 @@ export function firstDraft(html: string): string {
   const key = title(html);
   const seen = words(html);
   const list = drafts.get(key) ?? [];
-  const match = list.find((d) => overlap(d.words, seen) >= SAME_EMAIL);
-  if (match) return match.html;
+  const best = list
+    .map((d) => ({ d, score: overlap(d.words, seen) }))
+    .sort((a, b) => b.score - a.score)[0];
+  if (best && best.score >= SAME_EMAIL) return best.d.html;
   if ([...drafts.values()].reduce((n, l) => n + l.length, 0) >= MAX_DRAFTS) drafts.clear();
   drafts.set(key, [...list, { words: seen, html }]);
   return html;
-}
-
-/** Tests only. */
-export function forgetDrafts(): void {
-  drafts.clear();
 }
