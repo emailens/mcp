@@ -26,9 +26,12 @@ every tool call logged: all three passed a path without being told to.
   fallbacks; on a typical agent-written email that was 35 of 37 entries. Each
   audit reply came back 46% smaller for GPT 6 Luna and 60% for Gemini 3.8.
   `detail: "full"` still returns everything, info included.
-- **Engine 0.16.6** (was 0.16.4). A body background repeated with
+- **Engine 0.16.7** (was 0.16.4). A body background repeated with
   `!important`, or by the rule that also paints the wrapper, is no longer
-  reported lost; Gemini 3.8 had audited each email about six times on it.
+  reported lost; Gemini 3.8 had audited each email about six times on it
+  (0.16.6). The Outlook Classic preview matches real Outlook 2016 and 2019
+  screenshots: rem padding dropped, `mso-font-alt` honoured, `*` ignored
+  (0.16.7). Scores do not change.
 
 ## 0.12.1 - 2026-10-22
 
