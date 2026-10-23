@@ -548,3 +548,48 @@ describe("fix_email carries the Outlook Classic rules", () => {
     expect(text).toContain("corner cells");
   });
 });
+
+describe("path input keeps the source out of context", () => {
+  const fixture = `${import.meta.dir}/fixtures/cerberus-newsletter.html`;
+
+  test("a path gives the same analysis as the inline source", async () => {
+    const html = await Bun.file(fixture).text();
+    const inline = parseToolJson(await callTool("analyze_email", { html }));
+    const byPath = parseToolJson(await callTool("analyze_email", { path: fixture }));
+    expect(byPath).toEqual(inline);
+  });
+
+  test("fix_email on a path points at the file instead of repeating it", async () => {
+    const html = await Bun.file(fixture).text();
+    const inline = (await callTool("fix_email", { html })).content.map((c) => c.text).join("\n");
+    const byPath = (await callTool("fix_email", { path: fixture })).content.map((c) => c.text).join("\n");
+    expect(inline).toContain(html);
+    expect(byPath).not.toContain(html);
+    expect(byPath).toContain("cerberus-newsletter.html");
+    expect(byPath.length).toBeLessThan(inline.length - html.length * 0.9);
+  });
+
+  test("diff_emails reads both sides from disk", async () => {
+    const data = parseToolJson(await callTool("diff_emails", { beforePath: fixture, afterPath: fixture })) as {
+      summary: { clientsUnchanged: number };
+    };
+    expect(data.summary.clientsUnchanged).toBe(EMAIL_CLIENTS.length);
+  });
+
+  test("anything but an email source is refused", async () => {
+    const result = await callTool("fix_email", { path: `${import.meta.dir}/../package.json` });
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain("not an email source");
+  });
+
+  test("exactly one of html or path", async () => {
+    expect((await callTool("analyze_email", {})).isError).toBe(true);
+    expect((await callTool("analyze_email", { html: SIMPLE_HTML, path: fixture })).isError).toBe(true);
+  });
+
+  test("a missing file says so", async () => {
+    const result = await callTool("analyze_email", { path: `${import.meta.dir}/nope.html` });
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain("No file at");
+  });
+});

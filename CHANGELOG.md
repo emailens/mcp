@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **`path` instead of `html`** on every tool that takes a source (and
+  `beforePath` / `afterPath` on `diff_emails`). The server runs beside the
+  files an agent edits, so the email no longer travels through the model's
+  context on each call of a lint, fix, re-check loop. On a path, `fix_email`
+  points at the file instead of repeating the source in its prompt. Only email
+  sources are read (`.html`, `.htm`, `.mjml`, `.jsx`, `.tsx`, `.vue`, checked
+  after symlinks, size-capped before reading); the extension sets `format`.
+
+### Changed
+
+- **Compact JSON responses.** Pretty-printing was about 30% of every response.
+  Together with `path`, an analyze, fix, audit, re-analyze loop on the
+  Cerberus fixture went from 396K to 278K characters (-30%).
+
 ## 0.12.1 - 2026-10-22
 
 ### Added

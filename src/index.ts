@@ -25,6 +25,7 @@ import {
 let _checkDeliverability: ((domain: string) => Promise<unknown>) | null = null;
 import { config } from "./config.js";
 import { firstDraft } from "./drafts.js";
+import { readSource, withoutSource } from "./source.js";
 import { apiRequest, mcpError, noApiKeyError } from "./hosted.js";
 
 function toFramework(format?: string): Framework | undefined {
@@ -61,6 +62,16 @@ const detailEnum = z
   .describe(
     "'summary' (default) returns one entry per problem, listing the clients it affects (roughly 10x smaller). 'full' returns one entry per client with fix snippets.",
   );
+
+const htmlParam = z
+  .string()
+  .optional()
+  .describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so. Pass this or `path`.");
+
+const pathParam = z
+  .string()
+  .optional()
+  .describe("Absolute path to the email source file (.html, .htm, .mjml, .jsx, .tsx, .vue), instead of `html`. Prefer it when the email is on disk: the source stays out of your context. The extension sets `format` unless you pass one.");
 
 const targetingPolicyEnum = z
   .enum(["progressive", "strict", "lenient"])
@@ -197,7 +208,8 @@ server.registerTool(
     description:
       `Full email compatibility preview, transforms HTML for ${EMAIL_CLIENTS.length} email clients (Gmail, Outlook, Apple Mail, Yahoo, Samsung, Thunderbird, HEY, Proton Mail, AOL, Fastmail, Superhuman), analyzes CSS, generates scores, simulates dark mode, checks inbox preview and email size.`,
     inputSchema: {
-      html: z.string().describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so"),
+      html: htmlParam,
+      path: pathParam,
       clients: z
         .array(z.string())
         .optional()
@@ -213,7 +225,10 @@ server.registerTool(
       openWorldHint: false,
     },
   },
-  async ({ html, clients, format, targetingPolicy }) => {
+  async ({ html: inline, path, clients, format: given, targetingPolicy }) => {
+    const input = await readSource(inline, path, given);
+    if (!input.ok) return mcpError(input.message);
+    const { html, format } = input;
     const sizeError = validateHtmlSize(html);
     if (sizeError) return sizeError;
 
@@ -229,7 +244,7 @@ server.registerTool(
       const filter = clients.filter((c) => validClientIds.has(c));
       if (filter.length === 0) {
         return mcpError(
-          JSON.stringify({ error: "No valid client IDs provided", validClientIds: Array.from(validClientIds) }, null, 2),
+          JSON.stringify({ error: "No valid client IDs provided", validClientIds: Array.from(validClientIds) }),
         );
       }
       transforms = filter.map((c) => transformForClient(source.html, c, framework));
@@ -284,7 +299,7 @@ server.registerTool(
         : "Checked by Emailens against 21 email clients. Confirm on real Outlook, Gmail and Apple Mail \u2192 emailens.dev/real-devices?utm_source=mcp";
     }
 
-    return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
+    return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
   },
 );
 
@@ -297,7 +312,8 @@ server.registerTool(
     description:
       "Fix error and warning findings. Info findings are not problems (the email falls back safely there): never remove responsive (@media) or dark-mode CSS to clear them. Quick CSS compatibility analysis, returns per-client scores and one finding per problem, listing the clients it affects. For HTML input each finding carries loc (line, column, offset) and alsoAtLines, so you can edit the exact source. Narrow with clients, or pass detail:'full' for the per-client breakdown with fix snippets. Use audit_email for a full quality report (spam, links, a11y, images, etc.).",
     inputSchema: {
-      html: z.string().describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so"),
+      html: htmlParam,
+      path: pathParam,
       format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle' (HTML template or Vue single-file component). Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets. A pasted Vue file with no format is compiled as maizzle."),
       detail: detailEnum,
       clients: clientsParam,
@@ -311,7 +327,10 @@ server.registerTool(
       openWorldHint: false,
     },
   },
-  async ({ html, format, detail, clients, targetingPolicy }) => {
+  async ({ html: inline, path, format: given, detail, clients, targetingPolicy }) => {
+    const input = await readSource(inline, path, given);
+    if (!input.ok) return mcpError(input.message);
+    const { html, format } = input;
     const sizeError = validateHtmlSize(html);
     if (sizeError) return sizeError;
     const clientError = validateClients(clients);
@@ -339,10 +358,7 @@ server.registerTool(
               overallScore,
               scores,
               ...compatibilityPayload(warnings, detail, clients),
-            },
-            null,
-            2,
-          ),
+            }),
         },
       ],
     };
@@ -358,7 +374,8 @@ server.registerTool(
     description:
       "Fix error and warning findings, and restore anything listed in designRemovals. Info findings are not problems (the email falls back safely there): never remove responsive (@media), dark-mode CSS or rounded corners to clear them. designRemovals compares this version with the first one audited for the same email (or with previousHtml): design the edits deleted, such as @media rules, dark mode, corners, gradients, VML fallbacks or images. Comprehensive email quality audit: CSS compatibility, spam scoring, link validation, accessibility, images, inbox preview, size (Gmail clipping), template variables, content overflow, visual fallbacks, dark-mode and mobile text contrast, design consistency, structural faults in Outlook-only VML (which lives inside conditional comments and is invisible to every other check), style survival: CSS a client parses correctly and then discards, such as a stylesheet past Gmail's 16 KB ceiling or every rule after a `}}`, which no support matrix can express, and client targeting: HowToTarget hacks such as Gmail u+.body or MSO conditionals, which do not score as css-hack. For HTML input, findings tied to a specific element carry loc (line, column, offset) so you can edit the exact source. Compatibility is collapsed to one finding per problem listing the clients it affects; pass detail:'full' for the per-client breakdown with fix snippets. Use skip to omit checks, targetingPolicy to change how targeted scopes affect scores, and clients to narrow which clients are reported.",
     inputSchema: {
-      html: z.string().describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so"),
+      html: htmlParam,
+      path: pathParam,
       format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle' (HTML template or Vue single-file component). Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets. A pasted Vue file with no format is compiled as maizzle."),
       skip: z
         .array(skipEnum)
@@ -384,7 +401,10 @@ server.registerTool(
       openWorldHint: false,
     },
   },
-  async ({ html, format, skip, detail, clients, targetingPolicy, emailType, previousHtml }) => {
+  async ({ html: inline, path, format: given, skip, detail, clients, targetingPolicy, emailType, previousHtml }) => {
+    const input = await readSource(inline, path, given);
+    if (!input.ok) return mcpError(input.message);
+    const { html, format } = input;
     const sizeError = validateHtmlSize(html);
     if (sizeError) return sizeError;
     const clientError = validateClients(clients);
@@ -431,10 +451,7 @@ server.registerTool(
               design: report.design,
               styleSurvival: report.styleSurvival,
               targeting: report.targeting,
-            },
-            null,
-            2,
-          ),
+            }),
         },
       ],
     };
@@ -450,7 +467,8 @@ server.registerTool(
     description:
       "Generate a structured fix prompt for email compatibility issues. Returns markdown with the original code, detected issues (CSS or structural), fix snippets, and format-specific instructions. Use after preview_email or analyze_email.",
     inputSchema: {
-      html: z.string().describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so: the source to fix"),
+      html: htmlParam,
+      path: pathParam,
       format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle' (HTML template or Vue single-file component). Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets. A pasted Vue file with no format is compiled as maizzle."),
       scope: z.enum(["all", "current"]).optional().describe("'all' (default) or 'current' (requires selectedClientId)"),
       selectedClientId: z.string().optional().describe("Client ID to scope fixes to (e.g. 'outlook-windows')"),
@@ -463,7 +481,10 @@ server.registerTool(
       openWorldHint: false,
     },
   },
-  async ({ html, format, scope, selectedClientId }) => {
+  async ({ html: inline, path, format: given, scope, selectedClientId }) => {
+    const input = await readSource(inline, path, given);
+    if (!input.ok) return mcpError(input.message);
+    const { html, format } = input;
     const sizeError = validateHtmlSize(html);
     if (sizeError) return sizeError;
 
@@ -491,7 +512,7 @@ server.registerTool(
         content: [
           {
             type: "text" as const,
-            text: JSON.stringify({ message: "No compatibility issues found \u2014 nothing to fix.", overallScore: 100 }, null, 2),
+            text: JSON.stringify({ message: "No compatibility issues found \u2014 nothing to fix.", overallScore: 100 }),
           },
         ],
       };
@@ -532,12 +553,9 @@ server.registerTool(
                 truncated: estimate.truncated,
               },
               note: "Apply the fixes in the prompt below. Structural issues require HTML restructuring (tables, VML conditionals), not just CSS changes.",
-            },
-            null,
-            2,
-          ),
+            }),
         },
-        { type: "text" as const, text: prompt },
+        { type: "text" as const, text: input.path ? withoutSource(prompt, html, inputFormat, input.path) : prompt },
       ],
     };
   },
@@ -571,10 +589,7 @@ server.registerTool(
               engine: c.engine,
               darkModeSupport: c.darkModeSupport,
               ...(c.deprecated ? { deprecated: c.deprecated } : {}),
-            })),
-            null,
-            2,
-          ),
+            }))),
         },
       ],
     };
@@ -590,8 +605,10 @@ server.registerTool(
     description:
       "Compare two email HTML versions, shows score changes, fixed issues, and newly introduced issues per client. Use after making fixes to verify improvements.",
     inputSchema: {
-      before: z.string().describe("Original email source"),
-      after: z.string().describe("Modified email source, in the same format"),
+      before: z.string().optional().describe("Original email source. Pass this or `beforePath`."),
+      after: z.string().optional().describe("Modified email source, in the same format. Pass this or `afterPath`."),
+      beforePath: z.string().optional().describe("Absolute path to the original source file, instead of `before`"),
+      afterPath: z.string().optional().describe("Absolute path to the modified source file, instead of `after`"),
       format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle' (HTML template or Vue single-file component). Anything but 'html' is compiled before analysis and sets the syntax of the fix snippets. A pasted Vue file with no format is compiled as maizzle."),
     },
     annotations: {
@@ -602,7 +619,14 @@ server.registerTool(
       openWorldHint: false,
     },
   },
-  async ({ before, after, format }) => {
+  async ({ before: beforeInline, after: afterInline, beforePath, afterPath, format: given }) => {
+    const beforeInput = await readSource(beforeInline, beforePath, given, { html: "before", path: "beforePath" });
+    if (!beforeInput.ok) return mcpError(beforeInput.message);
+    const afterInput = await readSource(afterInline, afterPath, given, { html: "after", path: "afterPath" });
+    if (!afterInput.ok) return mcpError(afterInput.message);
+    const before = beforeInput.html;
+    const after = afterInput.html;
+    const format = afterInput.format ?? beforeInput.format;
     const beforeSizeError = validateHtmlSize(before);
     if (beforeSizeError) return beforeSizeError;
     const afterSizeError = validateHtmlSize(after);
@@ -666,10 +690,7 @@ server.registerTool(
                 clientsUnchanged,
                 avgScoreDelta: results.length > 0 ? Math.round((totalDelta / results.length) * 10) / 10 : 0,
               },
-            },
-            null,
-            2,
-          ),
+            }),
         },
       ],
     };
@@ -707,7 +728,7 @@ server.registerTool(
       }
       const report = await _checkDeliverability!(domain);
       return {
-        content: [{ type: "text" as const, text: JSON.stringify(report, null, 2) }],
+        content: [{ type: "text" as const, text: JSON.stringify(report) }],
       };
     } catch (err) {
       const msg = (err as Error).message ?? String(err);
@@ -730,7 +751,8 @@ server.registerTool(
     description:
       "Capture real email screenshots across 21 clients (Gmail, Outlook, Apple Mail, etc.) with light and dark mode variants. Screenshots are rendered in real browsers and hosted on CDN. Requires EMAILENS_API_KEY env var \u2014 free plan at emailens.dev?utm_source=mcp.",
     inputSchema: {
-      html: z.string().describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so"),
+      html: htmlParam,
+      path: pathParam,
       format: formatEnum.describe("Input format"),
       clients: z.array(z.string()).optional().describe("Filter to specific client IDs"),
       modes: z
@@ -747,7 +769,10 @@ server.registerTool(
       openWorldHint: true,
     },
   },
-  async ({ html, format, clients, modes, title }) => {
+  async ({ html: inline, path, format: given, clients, modes, title }) => {
+    const input = await readSource(inline, path, given);
+    if (!input.ok) return mcpError(input.message);
+    const { html, format } = input;
     if (!config.isHosted) {
       return noApiKeyError("capture_screenshots");
     }
@@ -807,10 +832,7 @@ server.registerTool(
                 captured: [],
                 failed: [],
                 note: `Preview created but screenshot capture failed: ${screenshotResult.error}. View the full preview at the URL above.`,
-              },
-              null,
-              2,
-            ),
+              }),
           },
         ],
       };
@@ -831,7 +853,7 @@ server.registerTool(
       result.note = `${ss.failed.length} of ${(ss.captured?.length ?? 0) + ss.failed.length} screenshots failed: ${ss.failed.join(", ")}`;
     }
 
-    return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
+    return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
   },
 );
 
@@ -844,7 +866,8 @@ server.registerTool(
     description:
       "Create a shareable link for an email preview. Recipients see the full analysis without needing an account. Requires EMAILENS_API_KEY env var and Dev plan ($9/mo).",
     inputSchema: {
-      html: z.string().describe("The email source: HTML, or an MJML / Maizzle / React Email template when `format` says so"),
+      html: htmlParam,
+      path: pathParam,
       title: z.string().optional().describe("Display title for the share page"),
       format: formatEnum.describe("Input format"),
     },
@@ -856,7 +879,10 @@ server.registerTool(
       openWorldHint: true,
     },
   },
-  async ({ html, title, format }) => {
+  async ({ html: inline, path, title, format: given }) => {
+    const input = await readSource(inline, path, given);
+    if (!input.ok) return mcpError(input.message);
+    const { html, format } = input;
     if (!config.isHosted) {
       return noApiKeyError("share_preview", "Shareable links require the Dev plan ($9/mo).");
     }
@@ -879,10 +905,7 @@ server.registerTool(
             {
               shareUrl: `${config.apiUrl}/share/${result.data!.id}`,
               expiresAt: result.data!.expiresAt,
-            },
-            null,
-            2,
-          ),
+            }),
         },
       ],
     };
@@ -929,7 +952,7 @@ server.registerTool(
       content: [
         {
           type: "text" as const,
-          text: JSON.stringify(result.data, null, 2),
+          text: JSON.stringify(result.data),
         },
       ],
     };
@@ -993,7 +1016,7 @@ server.registerTool(
       content: [
         {
           type: "text" as const,
-          text: JSON.stringify(result.data?.message ?? result.data, null, 2),
+          text: JSON.stringify(result.data?.message ?? result.data),
         },
       ],
     };
@@ -1038,7 +1061,7 @@ server.registerTool(
       content: [
         {
           type: "text" as const,
-          text: JSON.stringify(result.data, null, 2),
+          text: JSON.stringify(result.data),
         },
       ],
     };
@@ -1082,7 +1105,7 @@ server.registerTool(
       content: [
         {
           type: "text" as const,
-          text: JSON.stringify(result.data, null, 2),
+          text: JSON.stringify(result.data),
         },
       ],
     };

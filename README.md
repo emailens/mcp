@@ -98,7 +98,8 @@ Full email compatibility preview: transforms HTML for 21 clients, analyzes CSS, 
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `html` | string | Yes | Email HTML source |
+| `html` | string | One of | Email HTML source |
+| `path` | string | One of | Absolute path to the source file instead of `html` (`.html`, `.htm`, `.mjml`, `.jsx`, `.tsx`, `.vue`); the extension sets `format` |
 | `clients` | string[] | No | Filter to specific client IDs |
 | `format` | enum | No | `"html"`, `"jsx"`, `"mjml"`, `"maizzle"` |
 
@@ -108,7 +109,8 @@ Quick CSS compatibility analysis; returns per-client scores and one finding per 
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `html` | string | Yes | Email HTML source |
+| `html` | string | One of | Email HTML source |
+| `path` | string | One of | Absolute path to the source file instead of `html` (`.html`, `.htm`, `.mjml`, `.jsx`, `.tsx`, `.vue`); the extension sets `format` |
 | `format` | enum | No | Input format |
 | `detail` | enum | No | `"summary"` (default) or `"full"` |
 | `clients` | string[] | No | Only report these client IDs |
@@ -178,7 +180,8 @@ The last three cover what a light desktop preview cannot show: text that disappe
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `html` | string | Yes | Email HTML source |
+| `html` | string | One of | Email HTML source |
+| `path` | string | One of | Absolute path to the source file instead of `html` (`.html`, `.htm`, `.mjml`, `.jsx`, `.tsx`, `.vue`); the extension sets `format` |
 | `format` | enum | No | Input format |
 | `detail` | enum | No | `"summary"` (default) or `"full"` |
 | `clients` | string[] | No | Only report these client IDs |
@@ -195,7 +198,8 @@ Generate a structured fix prompt for compatibility issues. Returns markdown with
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `html` | string | Yes | Email HTML to fix |
+| `html` | string | One of | Email HTML to fix |
+| `path` | string | One of | Absolute path to the source file instead of `html` (`.html`, `.htm`, `.mjml`, `.jsx`, `.tsx`, `.vue`); the extension sets `format` |
 | `format` | enum | No | Controls fix syntax |
 | `scope` | enum | No | `"all"` or `"current"` |
 | `selectedClientId` | string | No | Client ID for scoped fixes |
@@ -210,8 +214,8 @@ Compare two email HTML versions; shows score changes, fixed issues, and introduc
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `before` | string | Yes | Original email HTML |
-| `after` | string | Yes | Modified email HTML |
+| `before` / `beforePath` | string | One of | Original email source, or its file |
+| `after` / `afterPath` | string | One of | Modified email source, or its file |
 | `format` | enum | No | Input format |
 
 #### `check_deliverability`
@@ -230,7 +234,8 @@ Capture real email screenshots across 21 clients in real browsers. Screenshots a
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `html` | string | Yes | Email HTML source |
+| `html` | string | One of | Email HTML source |
+| `path` | string | One of | Absolute path to the source file instead of `html` (`.html`, `.htm`, `.mjml`, `.jsx`, `.tsx`, `.vue`); the extension sets `format` |
 | `format` | enum | No | Input format |
 | `clients` | string[] | No | Filter clients |
 | `modes` | string[] | No | `["light"]`, `["dark"]`, or `["light", "dark"]` |
@@ -244,7 +249,8 @@ Create a shareable link. Recipients see the full analysis without an account.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `html` | string | Yes | Email HTML source |
+| `html` | string | One of | Email HTML source |
+| `path` | string | One of | Absolute path to the source file instead of `html` (`.html`, `.htm`, `.mjml`, `.jsx`, `.tsx`, `.vue`); the extension sets `format` |
 | `title` | string | No | Display title |
 | `format` | enum | No | Input format |
 
