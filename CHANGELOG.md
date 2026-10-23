@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.13.0 - 2026-10-23
+
+Less of the email, and less about it, crosses the model's context. Measured
+with Claude Opus 5.5, GPT 6 Luna and Gemini 3.8 writing five emails each,
+every tool call logged: all three passed a path without being told to.
 
 ### Added
 
@@ -17,6 +21,14 @@
 - **Compact JSON responses.** Pretty-printing was about 30% of every response.
   Together with `path`, an analyze, fix, audit, re-analyze loop on the
   Cerberus fixture went from 396K to 278K characters (-30%).
+- **The summary lists errors and warnings, and counts info.** `analyze_email`
+  and `audit_email` return `infoFindings` (a count) instead of listing safe
+  fallbacks; on a typical agent-written email that was 35 of 37 entries. Each
+  audit reply came back 46% smaller for GPT 6 Luna and 60% for Gemini 3.8.
+  `detail: "full"` still returns everything, info included.
+- **Engine 0.16.6** (was 0.16.4). A body background repeated with
+  `!important`, or by the rule that also paints the wrapper, is no longer
+  reported lost; Gemini 3.8 had audited each email about six times on it.
 
 ## 0.12.1 - 2026-10-22
 

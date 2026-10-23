@@ -202,7 +202,7 @@ function validateHtmlSize(html: string) {
 
 const server = new McpServer({
   name: "emailens",
-  version: "0.12.1",
+  version: "0.13.0",
 });
 
 // ── Local Tool: preview_email ──────────────────────────────────────
