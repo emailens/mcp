@@ -11,7 +11,7 @@
 [![npm](https://img.shields.io/npm/v/@emailens/mcp)](https://www.npmjs.com/package/@emailens/mcp)
 [![license](https://img.shields.io/npm/l/@emailens/mcp)](./LICENSE)
 [![MCP Registry](https://img.shields.io/badge/MCP-Registry-blue)](https://registry.modelcontextprotocol.io)
-[![Smithery](https://smithery.ai/badge/@emailens/emailens-mcp)](https://smithery.ai/server/emailens/emailens-mcp)
+[![Smithery](https://img.shields.io/badge/Smithery-listed-orange)](https://smithery.ai/servers/emailens-mcp/emailens-mcp)
 [![GitHub stars](https://img.shields.io/github/stars/emailens/mcp?style=flat)](https://github.com/emailens/mcp/stargazers)
 
 </div>
