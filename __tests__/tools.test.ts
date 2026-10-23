@@ -191,14 +191,30 @@ describe("audit_email", () => {
       @media (max-width:600px){.c{width:100%!important}}
       @media (prefers-color-scheme:dark){.c{background:#000!important}}
     </style></head><body><table class="c"><tr><td>hi</td></tr></table></body></html>`;
-    const data = parseToolJson(await callTool("audit_email", { html: RESPONSIVE })) as {
-      compatibility: { findings: Array<{ property: string; severity: string }> };
+    const isEnhancement = (p: string) => ["<style>", "@media", "@media prefers-color-scheme"].includes(p);
+    // The default leaves info out of the list, so nothing reads as a fix to make.
+    const summary = parseToolJson(await callTool("audit_email", { html: RESPONSIVE })) as {
+      compatibility: { findings: Array<{ property: string }>; infoFindings?: number };
     };
-    const enhancement = data.compatibility.findings.filter((f) =>
-      ["<style>", "@media", "@media prefers-color-scheme"].includes(f.property),
-    );
+    expect(summary.compatibility.findings.filter((f) => isEnhancement(f.property))).toEqual([]);
+    expect(summary.compatibility.infoFindings).toBeGreaterThan(0);
+    // detail:'full' still lists them, as info.
+    const full = parseToolJson(await callTool("audit_email", { html: RESPONSIVE, detail: "full" })) as {
+      compatibility: { warnings: Array<{ property: string; severity: string }> };
+    };
+    const enhancement = full.compatibility.warnings.filter((w) => isEnhancement(w.property));
     expect(enhancement.length).toBeGreaterThan(0);
-    expect(enhancement.every((f) => f.severity === "info")).toBe(true);
+    expect(enhancement.every((w) => w.severity === "info")).toBe(true);
+  });
+
+  test("the default lists only errors and warnings, and counts info", async () => {
+    const data = parseToolJson(await callTool("analyze_email", { html: BAD_HTML })) as {
+      findings: Array<{ severity: string }>;
+      infoFindings?: number;
+    };
+    expect(data.findings.length).toBeGreaterThan(0);
+    expect(data.findings.every((f) => f.severity !== "info")).toBe(true);
+    expect(data.infoFindings).toBeGreaterThan(0);
   });
 
   test("a revision that deletes the design reports it, held to the first draft", async () => {
@@ -425,12 +441,12 @@ describe("source positions", () => {
   const POSITIONED = [
     /* 1 */ '<html lang="en">',
     /* 2 */ "<head><style>",
-    /* 3 */ "  .card { border-radius: 8px; }",
+    /* 3 */ "  .card { box-shadow: 0 1px 2px #000; }",
     /* 4 */ "</style></head>",
     /* 5 */ "<body>",
     /* 6 */ '  <a href="http://example.com">go</a>',
-    /* 7 */ '  <div style="border-radius:4px">a</div>',
-    /* 8 */ '  <div style="border-radius:4px">b</div>',
+    /* 7 */ '  <div style="box-shadow:0 1px 2px #000">a</div>',
+    /* 8 */ '  <div style="box-shadow:0 1px 2px #000">b</div>',
     /* 9 */ "</body></html>",
   ].join("\n");
 
@@ -447,16 +463,16 @@ describe("source positions", () => {
   }
 
   test("analyze_email locates the finding in the HTML it was given", async () => {
-    const radius = (await findings()).filter((f) => f.property === "border-radius" && f.loc);
+    const shadow = (await findings()).filter((f) => f.property === "box-shadow" && f.loc);
 
-    // Three places, one sentence: Outlook Classic, where no roundrect covers
-    // it. (New Outlook draws border-radius; since engine 0.14.x it is no
-    // longer reported there.) The sentence lists every place.
-    expect(radius).toHaveLength(1);
-    expect(radius[0].clients).toEqual(["outlook-windows-legacy"]);
-    for (const finding of radius) {
+    // Three places, one sentence, listing every place. (A warning: the default
+    // summary leaves info out, and border-radius in Outlook Classic is info
+    // since engine 0.16.4.)
+    expect(shadow).toHaveLength(1);
+    expect(shadow[0].clients).toContain("outlook-windows-legacy");
+    for (const finding of shadow) {
       expect(POSITIONED.slice(finding.loc!.offset, finding.loc!.offset + finding.loc!.length)).toBe(
-        "border-radius: 8px",
+        "box-shadow: 0 1px 2px #000",
       );
       expect(finding.alsoAtLines).toEqual([7, 8]);
     }
@@ -475,10 +491,10 @@ describe("source positions", () => {
     };
     // Per selector and per client, with the fix snippets the collapsed shape
     // leaves out: a stylesheet rule and two inline styles.
-    const radius = data.warnings.filter((w) => w.property === "border-radius");
-    expect(radius.length).toBeGreaterThan(1);
-    expect(radius.every((w) => w.client === "outlook-windows-legacy")).toBe(true);
-    expect(radius.some((w) => w.fix)).toBe(true);
+    const shadow = data.warnings.filter((w) => w.property === "box-shadow");
+    expect(shadow.length).toBeGreaterThan(1);
+    expect(shadow.some((w) => w.client === "outlook-windows-legacy")).toBe(true);
+    expect(shadow.some((w) => w.fix)).toBe(true);
   });
 
   test("an unknown client id is rejected, not silently filtered to nothing", async () => {

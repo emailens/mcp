@@ -53,14 +53,17 @@ const formatEnum = z.enum(["html", "jsx", "mjml", "maizzle"]).optional();
  *
  * `summary` collapses the engine's per-client, per-selector warnings into one
  * entry per problem listing the clients it affects: the same information at a
- * fraction of the tokens. `full` is the engine's own shape, per client, with
- * fix snippets, for a caller that wants everything.
+ * fraction of the tokens. It also leaves out info findings, counting them
+ * instead: they fall back safely, and on a typical email they are 35 of 37
+ * entries, which buried the two warnings an agent had to fix. `full` is the
+ * engine's own shape, per client, with fix snippets and info, for a caller that
+ * wants everything.
  */
 const detailEnum = z
   .enum(["summary", "full"])
   .optional()
   .describe(
-    "'summary' (default) returns one entry per problem, listing the clients it affects (roughly 10x smaller). 'full' returns one entry per client with fix snippets.",
+    "'summary' (default) returns one entry per error or warning, listing the clients it affects, and only counts info findings (safe fallbacks). 'full' returns one entry per client with fix snippets, info included.",
   );
 
 const htmlParam = z
@@ -144,11 +147,14 @@ function compatibilityPayload(
       })),
     };
   }
-  const findings = collapseWarnings(scoped);
+  const collapsed = collapseWarnings(scoped);
+  const findings = collapsed.filter((f) => f.severity !== "info");
+  const info = collapsed.length - findings.length;
   return {
     warningCount: scoped.length,
     findingCount: findings.length,
     findings,
+    ...(info ? { infoFindings: info, infoNote: "Safe fallbacks, not problems. Pass detail:'full' to list them." } : {}),
   };
 }
 
