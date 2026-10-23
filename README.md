@@ -279,29 +279,31 @@ HTML with `format: "html"`: the tools say so when they hit this.
 
 ## Supported Email Clients (21)
 
+Each client links to its CSS support page. Setup guides for every assistant: [emailens.dev/mcp](https://emailens.dev/mcp).
+
 | Client | ID | Dark Mode | Notes |
 |---|---|---|---|
-| Gmail | `gmail-web` | Yes | |
-| Gmail Android | `gmail-android` | Yes | |
-| Gmail iOS | `gmail-ios` | Yes | |
-| Outlook 365 | `outlook-web` | Yes | |
-| Outlook Windows | `outlook-windows` | No | |
-| Outlook Windows Legacy | `outlook-windows-legacy` | No | Deprecated Oct 2026 |
-| Outlook iOS | `outlook-ios` | Yes | New in v0.4.0 |
-| Outlook Android | `outlook-android` | Yes | New in v0.4.0 |
-| Outlook for Mac | `outlook-macos` | Yes | New in v0.10.0 |
-| Apple Mail | `apple-mail-macos` | Yes | |
-| Apple Mail iOS | `apple-mail-ios` | Yes | |
-| Yahoo Mail | `yahoo-mail` | Yes | |
-| Yahoo Mail Android | `yahoo-mail-android` | Yes | New in v0.10.0 |
-| Yahoo Mail iOS | `yahoo-mail-ios` | Yes | New in v0.10.0 |
-| Samsung Mail | `samsung-mail` | Yes | |
-| Thunderbird | `thunderbird` | No | |
-| HEY Mail | `hey-mail` | Yes | |
-| Proton Mail | `protonmail` | Yes | New in v0.10.0 |
-| AOL Mail | `aol` | Yes | New in v0.10.0 |
-| Fastmail | `fastmail` | Yes | New in v0.10.0 |
-| Superhuman | `superhuman` | Yes | |
+| [Gmail](https://emailens.dev/email-css/clients/gmail-web) | `gmail-web` | Yes | |
+| [Gmail Android](https://emailens.dev/email-css/clients/gmail-android) | `gmail-android` | Yes | |
+| [Gmail iOS](https://emailens.dev/email-css/clients/gmail-ios) | `gmail-ios` | Yes | |
+| [Outlook 365](https://emailens.dev/email-css/clients/outlook-web) | `outlook-web` | Yes | |
+| [Outlook Windows](https://emailens.dev/email-css/clients/outlook-windows) | `outlook-windows` | No | |
+| [Outlook Windows Legacy](https://emailens.dev/email-css/clients/outlook-windows-legacy) | `outlook-windows-legacy` | No | Deprecated Oct 2026 |
+| [Outlook iOS](https://emailens.dev/email-css/clients/outlook-ios) | `outlook-ios` | Yes | New in v0.4.0 |
+| [Outlook Android](https://emailens.dev/email-css/clients/outlook-android) | `outlook-android` | Yes | New in v0.4.0 |
+| [Outlook for Mac](https://emailens.dev/email-css/clients/outlook-macos) | `outlook-macos` | Yes | New in v0.10.0 |
+| [Apple Mail](https://emailens.dev/email-css/clients/apple-mail-macos) | `apple-mail-macos` | Yes | |
+| [Apple Mail iOS](https://emailens.dev/email-css/clients/apple-mail-ios) | `apple-mail-ios` | Yes | |
+| [Yahoo Mail](https://emailens.dev/email-css/clients/yahoo-mail) | `yahoo-mail` | Yes | |
+| [Yahoo Mail Android](https://emailens.dev/email-css/clients/yahoo-mail-android) | `yahoo-mail-android` | Yes | New in v0.10.0 |
+| [Yahoo Mail iOS](https://emailens.dev/email-css/clients/yahoo-mail-ios) | `yahoo-mail-ios` | Yes | New in v0.10.0 |
+| [Samsung Mail](https://emailens.dev/email-css/clients/samsung-mail) | `samsung-mail` | Yes | |
+| [Thunderbird](https://emailens.dev/email-css/clients/thunderbird) | `thunderbird` | No | |
+| [HEY Mail](https://emailens.dev/email-css/clients/hey-mail) | `hey-mail` | Yes | |
+| [Proton Mail](https://emailens.dev/email-css/clients/protonmail) | `protonmail` | Yes | New in v0.10.0 |
+| [AOL Mail](https://emailens.dev/email-css/clients/aol) | `aol` | Yes | New in v0.10.0 |
+| [Fastmail](https://emailens.dev/email-css/clients/fastmail) | `fastmail` | Yes | New in v0.10.0 |
+| [Superhuman](https://emailens.dev/email-css/clients/superhuman) | `superhuman` | Yes | |
 
 ## Releasing
 
