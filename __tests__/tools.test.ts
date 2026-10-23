@@ -593,3 +593,69 @@ describe("path input keeps the source out of context", () => {
     expect(result.content[0].text).toContain("No file at");
   });
 });
+
+describe("path input: the guards and the format", () => {
+  const { mkdtempSync, writeFileSync, mkdirSync, symlinkSync } = require("node:fs") as typeof import("node:fs");
+  const { tmpdir } = require("node:os") as typeof import("node:os");
+  const dir = mkdtempSync(`${tmpdir()}/emailens-path-`);
+  const fixture = `${import.meta.dir}/fixtures/cerberus-newsletter.html`;
+
+  test("a symlink named .html to another file is refused", async () => {
+    writeFileSync(`${dir}/secret.txt`, "TOPSECRET-42");
+    try {
+      symlinkSync(`${dir}/secret.txt`, `${dir}/link.html`);
+    } catch {
+      return; // Windows without symlink rights: nothing to test
+    }
+    const result = await callTool("fix_email", { path: `${dir}/link.html` });
+    expect(result.isError).toBe(true);
+    expect(result.content.map((c) => c.text).join("")).not.toContain("TOPSECRET-42");
+  });
+
+  test("a directory named .html is refused", async () => {
+    mkdirSync(`${dir}/folder.html`);
+    const result = await callTool("analyze_email", { path: `${dir}/folder.html` });
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain("not a file");
+  });
+
+  test("a file over the size limit is refused before it is read", async () => {
+    writeFileSync(`${dir}/huge.html`, "<p>x</p>".repeat(400_000));
+    const result = await callTool("analyze_email", { path: `${dir}/huge.html` });
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain("limit");
+  });
+
+  test(".mjml is compiled as MJML without a format", async () => {
+    const mjml = `<mjml><mj-body><mj-section><mj-column><mj-text>Hello from MJML</mj-text></mj-column></mj-section></mj-body></mjml>`;
+    writeFileSync(`${dir}/email.mjml`, mjml);
+    const byPath = parseToolJson(await callTool("analyze_email", { path: `${dir}/email.mjml` }));
+    const inline = parseToolJson(await callTool("analyze_email", { html: mjml, format: "mjml" }));
+    expect(byPath).toEqual(inline);
+  });
+
+  test("an explicit format wins over the extension", async () => {
+    writeFileSync(`${dir}/plain.mjml`, SIMPLE_HTML);
+    const result = await callTool("analyze_email", { path: `${dir}/plain.mjml`, format: "html" });
+    expect(result.isError).toBeFalsy();
+  });
+
+  test("preview_email and audit_email read a path like the inline source", async () => {
+    const html = await Bun.file(fixture).text();
+    for (const name of ["preview_email", "audit_email"]) {
+      const inline = parseToolJson(await callTool(name, { html })) as Record<string, unknown>;
+      const byPath = parseToolJson(await callTool(name, { path: fixture })) as Record<string, unknown>;
+      // audit remembers the first draft, so designRemovals may differ by call order; the rest must match
+      delete inline.designRemovals;
+      delete byPath.designRemovals;
+      expect(byPath).toEqual(inline);
+    }
+  });
+
+  test("hosted tools accept a path and still ask for the API key", async () => {
+    for (const name of ["capture_screenshots", "share_preview"]) {
+      const result = await callTool(name, { path: fixture });
+      expect(result.content[0].text).toContain("EMAILENS_API_KEY");
+    }
+  });
+});
