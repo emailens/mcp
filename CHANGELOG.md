@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.13.1 - 2026-10-25
+
+Security: dependency updates. No behaviour change.
+
+- `@modelcontextprotocol/sdk` ^1.32.2 (was ^1.30.0): an OAuth client could send
+  credentials to an authorization server the MCP server chose; one request
+  within the size limit could exhaust memory during validation.
+- `zod` ^4.6.7 (was ^3.25.76): no 3.x release fixes memory exhaustion while
+  validating oversized constrained collections. The tools use only
+  `string`, `enum`, `number` and `array`, unchanged in zod 4.
+- The lockfile is regenerated: `@hono/node-server`, `body-parser`,
+  `express-rate-limit` and `fast-uri` move to their fixed releases.
+
 ## 0.13.0 - 2026-10-23
 
 Less of the email, and less about it, crosses the model's context. Measured
