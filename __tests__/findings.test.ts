@@ -41,10 +41,11 @@ describe("collapsing the response", () => {
   test("an ordinary newsletter fits in a conversation", () => {
     const before = perClientPayload(warnings).length;
     const after = JSON.stringify(collapseWarnings(warnings), null, 2).length;
-    // Roughly 286KB to 40KB on this fixture. The bound is loose enough to
+    // 187KB to 45KB on this fixture since engine 0.17.2, which merges a finding
+    // repeated on several elements itself (286KB to 40KB before). The bound is loose enough to
     // survive a caniemail resync and tight enough to fail if the collapsing
     // stops happening.
-    expect(before).toBeGreaterThan(200_000);
+    expect(before).toBeGreaterThan(150_000);
     expect(after).toBeLessThan(80_000);
     expect(after / before).toBeLessThan(0.25);
   });
@@ -57,7 +58,8 @@ describe("collapsing the response", () => {
     for (const w of warnings) {
       expect(covered.has(`${w.property}|${w.severity}|${w.client}`)).toBe(true);
     }
-    expect(findings.length).toBeLessThan(warnings.length / 4);
+    // 252 warnings to 84 findings (engine 0.18.0); the engine merges per element now.
+    expect(findings.length).toBeLessThan(warnings.length / 2);
   });
 
   test("a client is never told about a caveat its own note did not make", () => {

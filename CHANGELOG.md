@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.15.0 - 2026-10-29
+
+Engine 0.18.0. The checks the tools run change:
+
+- **Engine 0.18.0**: Yahoo web and AOL drop a whole `<style>` block when
+  an `@media` query is a comma-separated list, and Yahoo ignores
+  `background-size` (both warned); Outlook Classic VML buttons get their
+  real corner radius, and a web font without `mso-font-alt` falls to the
+  next font. Some scores change where these apply.
+
 ## 0.14.0 - 2026-10-28
 
 Engine 0.17.0. The checks the tools run change:
