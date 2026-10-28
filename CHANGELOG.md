@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.14.0 - 2026-10-28
+
+Engine 0.17.0. The checks the tools run change:
+
+- **Engine 0.17.0**: a plain `display:none` preheader is no longer a spam
+  error; new warnings for Gmail on iPhone inverting dark backgrounds, CSS
+  nesting (Tailwind v4 output) and rem units (Outlook Classic, Yahoo, AOL).
+  Some scores go down where those apply.
+
 ## 0.13.1 - 2026-10-25
 
 Security: dependency updates. No behaviour change.
