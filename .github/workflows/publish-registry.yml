@@ -6,7 +6,11 @@
 # ever pushed it.
 #
 # So the push is a workflow rather than a step in someone's head. It runs on a
-# published GitHub release, and on demand for a release that predates it.
+# published GitHub release, on any push to main that changes server.json, once
+# a day, and on demand. npm is published by hand, often after the push, so a
+# version not on npm yet is skipped quietly and the daily run lists it once it
+# is there. A version the registry already lists is skipped too, so the daily
+# run is a no-op on most days. 0.13.1 was missed this way before (2026-10-28).
 #
 # npm publishing stays manual on purpose: this needs no secrets at all. The
 # registry accepts GitHub OIDC for an `io.github.*` namespace, so there is no
@@ -17,6 +21,11 @@ name: Publish to MCP Registry
 on:
   release:
     types: [published]
+  push:
+    branches: [main]
+    paths: [server.json]
+  schedule:
+    - cron: "17 6 * * *"
   workflow_dispatch:
 
 permissions:
@@ -34,14 +43,29 @@ jobs:
       # that the published package's `mcpName` matches the name in server.json.
       # Failing here is cheaper than a rejected publish.
       - name: Check the version is on npm
+        id: check
         run: |
           version=$(node -p "require('./server.json').packages[0].version")
           name=$(node -p "require('./server.json').packages[0].identifier")
+          server=$(node -p "require('./server.json').name")
           echo "server.json wants $name@$version"
+          listed=$(curl -fsS "https://registry.modelcontextprotocol.io/v0/servers/$(node -p "encodeURIComponent('$server')")/versions/latest" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).server.version)}catch{console.log("")}})' || true)
+          if [ "$listed" = "$version" ]; then
+            echo "The registry already lists $version; nothing to do."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           published=$(npm view "$name@$version" version 2>/dev/null || true)
           if [ "$published" != "$version" ]; then
-            echo "::error::$name@$version is not on npm. Publish it first."
-            exit 1
+            # A release or a manual run means it should be there: fail loudly.
+            # A push or the daily run is often ahead of the npm publish.
+            if [ "$GITHUB_EVENT_NAME" = "release" ] || [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+              echo "::error::$name@$version is not on npm. Publish it first."
+              exit 1
+            fi
+            echo "$name@$version is not on npm yet; the daily run will list it once it is."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
           mcp_name=$(npm view "$name@$version" mcpName 2>/dev/null || true)
           expected=$(node -p "require('./server.json').name")
@@ -59,11 +83,14 @@ jobs:
           fi
 
       - name: Install mcp-publisher
+        if: steps.check.outputs.skip != 'true'
         run: |
           curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
 
       - name: Authenticate
+        if: steps.check.outputs.skip != 'true'
         run: ./mcp-publisher login github-oidc
 
       - name: Publish
+        if: steps.check.outputs.skip != 'true'
         run: ./mcp-publisher publish
