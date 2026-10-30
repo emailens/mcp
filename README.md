@@ -8,11 +8,11 @@
 **Email rendering analysis for AI assistants**
 
 [![CI](https://github.com/emailens/mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/emailens/mcp/actions/workflows/ci.yml)
-[![npm](https://img.shields.io/npm/v/@emailens/mcp)](https://www.npmjs.com/package/@emailens/mcp)
-[![license](https://img.shields.io/npm/l/@emailens/mcp)](./LICENSE)
+[![npm](https://img.shields.io/npm/v/@emailens/mcp?cacheSeconds=86400)](https://www.npmjs.com/package/@emailens/mcp)
+[![license](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 [![MCP Registry](https://img.shields.io/badge/MCP-Registry-blue)](https://registry.modelcontextprotocol.io)
 [![Smithery](https://img.shields.io/badge/Smithery-listed-orange)](https://smithery.ai/servers/emailens-mcp/emailens-mcp)
-[![GitHub stars](https://img.shields.io/github/stars/emailens/mcp?style=flat)](https://github.com/emailens/mcp/stargazers)
+[![GitHub stars](https://img.shields.io/github/stars/emailens/mcp?style=flat&cacheSeconds=86400)](https://github.com/emailens/mcp/stargazers)
 
 </div>
 
