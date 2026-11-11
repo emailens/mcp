@@ -7,7 +7,8 @@
   (columns that stack, a button moved or resized, a fill or corners lost).
   The verdict the Emailens email page shows. It draws both pages in a
   browser: install `playwright-core` beside the server, plus a local Chromium
-  or `BROWSERLESS_URL`. Needs the engine release that adds `/design`.
+  or `BROWSERLESS_URL`. With the optional `sharp`, it also compares the two
+  pages pixel by pixel, as the hosted check does. Needs the engine release that adds `/design`.
 
 ## 0.15.0 - 2026-10-29
 

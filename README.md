@@ -253,15 +253,16 @@ confirm the fix didn't break the layout somewhere else.
     "more": 0 }] }
 ```
 
-It needs a browser. Add `playwright-core` to the server, then either install
-a local Chromium or point it at your Browserless instance:
+It needs a browser. Add `playwright-core` to the server, and `sharp` for the
+pixel comparison. Then either install a local Chromium or point it at your
+Browserless instance:
 
 ```json
 {
   "mcpServers": {
     "emailens": {
       "command": "npx",
-      "args": ["-y", "-p", "@emailens/mcp", "-p", "playwright-core", "emailens-mcp"],
+      "args": ["-y", "-p", "@emailens/mcp", "-p", "playwright-core", "-p", "sharp", "emailens-mcp"],
       "env": { "BROWSERLESS_URL": "wss://..." }
     }
   }
@@ -271,9 +272,12 @@ a local Chromium or point it at your Browserless instance:
 Without `BROWSERLESS_URL`, it uses a local Chromium. Install one with
 `npx playwright-core install chromium`. A few more things to know:
 - It runs in light mode, against our live preview, not real inboxes.
-- It compares page structure only. The hosted check on saved emails also
-  compares screenshots pixel by pixel, which agrees more often with a human
-  reviewer.
+- With `sharp`, it also compares screenshots of the two pages pixel by
+  pixel, as the hosted check does. That agrees more often with a human
+  reviewer, and each result carries `diff` (the share of pixels off) and
+  `aligned`. Without `sharp`, it compares page structure only.
+- On Browserless, the session has to stay open for the whole call. Raise a
+  short `TIMEOUT`, or pass fewer `clients`.
 - Scripts are off in both pages.
 - The font stand-ins the previews use are downloaded once from
   app.emailens.dev into `~/.cache/emailens/fonts`.

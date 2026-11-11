@@ -755,7 +755,7 @@ server.registerTool(
   {
     title: "Check Design",
     description:
-      "Whether the email still looks like its design in each client's live preview: draws the email as the client shows it and as written, in a real browser, and compares the layouts element by element. Returns per client a verdict (kept = Ready, changed = Needs work, broken = Broken) with the reasons (columns that stack, a button that moved or resized, a fill or corners lost, fonts and spacing changed). Use it after editing an email to confirm a fix did not break the layout. Needs playwright-core installed beside this server and a browser (a local Chromium, or BROWSERLESS_URL). Light mode, our live preview, not real inboxes.",
+      "Whether the email still looks like its design in each client's live preview: draws the email as the client shows it and as written, in a real browser, and compares the layouts element by element. Returns per client a verdict (kept = Ready, changed = Needs work, broken = Broken) with the reasons (columns that stack, a button that moved or resized, a fill or corners lost, fonts and spacing changed). Use it after editing an email to confirm a fix did not break the layout. Needs playwright-core installed beside this server and a browser (a local Chromium, or BROWSERLESS_URL); with sharp installed it also compares screenshots pixel by pixel and returns diff and aligned. Light mode, our live preview, not real inboxes.",
     inputSchema: {
       html: htmlParam,
       path: pathParam,
