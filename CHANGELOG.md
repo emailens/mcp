@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **`check_design`**: per client, whether the email still looks like its
+  design in our live preview, `kept` / `changed` / `broken`, with the reasons
+  (columns that stack, a button moved or resized, a fill or corners lost).
+  The verdict the Emailens email page shows. It draws both pages in a
+  browser: install `playwright-core` beside the server, plus a local Chromium
+  or `BROWSERLESS_URL`. Needs the engine release that adds `/design`.
+
 ## 0.15.0 - 2026-10-29
 
 Engine 0.18.0. The checks the tools run change:

@@ -226,6 +226,58 @@ Check email deliverability for a domain: SPF, DKIM, DMARC, MX, BIMI records with
 |---|---|---|---|
 | `domain` | string | Yes | Domain to check (e.g. `"company.com"`) |
 
+#### `check_design`
+
+Whether the email still looks like its design in each client's live preview.
+It draws the email in a real browser twice: as the client shows it, and as
+you wrote it. Then it compares the two layouts element by element. Each
+client gets a verdict, `kept` (Ready), `changed` (Needs work) or `broken`
+(Broken), with the reasons: columns that stack, a button that moved or
+resized, a fill or corners lost, fonts and spacing changed. This is the
+verdict the Emailens email page shows. An agent can call it after an edit to
+confirm the fix didn't break the layout somewhere else.
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `html` | string | One of | Email HTML source |
+| `path` | string | One of | Absolute path to the source file instead of `html` |
+| `clients` | string[] | No | Client IDs to check. Default: all 21 (a few seconds each, four at a time) |
+| `format` | enum | No | Input format |
+
+```json
+{ "broken": ["outlook-windows-legacy"],
+  "results": [{ "clientId": "outlook-windows-legacy", "name": "Outlook Classic",
+    "verdict": "broken", "label": "Broken",
+    "sentence": "Outlook Classic breaks your design.",
+    "reasons": ["Columns that sit side by side in your design stack on top of each other."],
+    "more": 0 }] }
+```
+
+It needs a browser. Add `playwright-core` to the server, then either install
+a local Chromium or point it at your Browserless instance:
+
+```json
+{
+  "mcpServers": {
+    "emailens": {
+      "command": "npx",
+      "args": ["-y", "-p", "@emailens/mcp", "-p", "playwright-core", "emailens-mcp"],
+      "env": { "BROWSERLESS_URL": "wss://..." }
+    }
+  }
+}
+```
+
+Without `BROWSERLESS_URL`, it uses a local Chromium. Install one with
+`npx playwright-core install chromium`. A few more things to know:
+- It runs in light mode, against our live preview, not real inboxes.
+- It compares page structure only. The hosted check on saved emails also
+  compares screenshots pixel by pixel, which agrees more often with a human
+  reviewer.
+- Scripts are off in both pages.
+- The font stand-ins the previews use are downloaded once from
+  app.emailens.dev into `~/.cache/emailens/fonts`.
+
 ### Hosted Tools (require `EMAILENS_API_KEY`)
 
 #### `capture_screenshots`

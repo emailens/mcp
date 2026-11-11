@@ -748,6 +748,78 @@ server.registerTool(
   },
 );
 
+// ── Local Tool: check_design ───────────────────────────────────────
+
+server.registerTool(
+  "check_design",
+  {
+    title: "Check Design",
+    description:
+      "Whether the email still looks like its design in each client's live preview: draws the email as the client shows it and as written, in a real browser, and compares the layouts element by element. Returns per client a verdict (kept = Ready, changed = Needs work, broken = Broken) with the reasons (columns that stack, a button that moved or resized, a fill or corners lost, fonts and spacing changed). Use it after editing an email to confirm a fix did not break the layout. Needs playwright-core installed beside this server and a browser (a local Chromium, or BROWSERLESS_URL). Light mode, our live preview, not real inboxes.",
+    inputSchema: {
+      html: htmlParam,
+      path: pathParam,
+      clients: z
+        .array(z.string())
+        .optional()
+        .describe("Client IDs to check (e.g. ['outlook-windows-legacy', 'gmail-web']). Default: all; each client takes a few seconds"),
+      format: formatEnum.describe("Source format: 'html' (default), 'jsx' (React Email), 'mjml', or 'maizzle'. Anything but 'html' is compiled first."),
+    },
+    annotations: {
+      title: "Check Design",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      // The email's own images and the font stand-ins load from the web.
+      openWorldHint: true,
+    },
+  },
+  async ({ html: inline, path, clients, format: given }) => {
+    const input = await readSource(inline, path, given);
+    if (!input.ok) return mcpError(input.message);
+    const { html, format } = input;
+    const sizeError = validateHtmlSize(html);
+    if (sizeError) return sizeError;
+    const source = await toHtml(html, format);
+    if (!source.ok) return mcpError(source.message);
+
+    const known = new Set(EMAIL_CLIENTS.map((c) => c.id));
+    const ids = clients ? clients.filter((c) => known.has(c)) : [...known];
+    if (ids.length === 0) {
+      return mcpError(JSON.stringify({ error: "No valid client IDs provided", validClientIds: [...known] }));
+    }
+
+    let design: typeof import("@emailens/engine/design");
+    try {
+      design = await import("@emailens/engine/design");
+    } catch {
+      return mcpError(
+        "check_design requires @emailens/engine with the /design subpath. Update with: npm install @emailens/engine@latest",
+      );
+    }
+    try {
+      const results = await design.checkDesignAcross(source.html, ids, {
+        framework: toFramework(resolveSourceFormat(html, format)),
+      });
+      const broken = results.filter((r) => r.verdict === "broken").map((r) => r.clientId);
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify(
+              results.length
+                ? { broken, results }
+                : { results, note: "No design to compare: the input is not a rendered email." },
+            ),
+          },
+        ],
+      };
+    } catch (err) {
+      return mcpError(`Design check failed: ${(err as Error).message}`);
+    }
+  },
+);
+
 // ── Hosted Tool: capture_screenshots ───────────────────────────────
 
 server.registerTool(

@@ -32,10 +32,19 @@
     "@modelcontextprotocol/sdk": "^1.32.2",
     "zod": "^4.6.7"
   },
+  "peerDependencies": {
+    "playwright-core": ">=1.40.0"
+  },
+  "peerDependenciesMeta": {
+    "playwright-core": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@types/node": "^25.9.5",
     "bun-types": "^1.4.0",
     "mjml": "^5.4.0",
+    "playwright-core": "^1.62.1",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3"
   },

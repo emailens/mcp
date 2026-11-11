@@ -675,3 +675,32 @@ describe("path input: the guards and the format", () => {
     }
   });
 });
+
+describe("check_design", () => {
+  // Two columns laid out by flexbox: Classic Outlook (Word) has no flexbox,
+  // so they stack there; Apple Mail draws them as written. Runs a local
+  // Chromium (playwright-core's) in the server, as a user's install does.
+  const FLEX = `<!doctype html><html><head></head><body style="margin:0;font-family:Arial,sans-serif"><div style="display:flex;width:600px"><div style="width:300px;background:#1d4ed8;color:#fff;padding:20px;font-size:16px">Left column copy</div><div style="width:300px;background:#f59e0b;padding:20px;font-size:16px;color:#111111">Right column copy</div></div></body></html>`;
+
+  test("names the client that breaks the design, with the reason", async () => {
+    const result = await callTool("check_design", {
+      html: FLEX,
+      clients: ["apple-mail-macos", "outlook-windows-legacy"],
+    });
+    const data = parseToolJson(result) as {
+      broken: string[];
+      results: { clientId: string; verdict: string; reasons: string[] }[];
+    };
+    expect(data.broken).toEqual(["outlook-windows-legacy"]);
+    expect(data.results.map((r) => [r.clientId, r.verdict])).toEqual([
+      ["apple-mail-macos", "kept"],
+      ["outlook-windows-legacy", "broken"],
+    ]);
+    expect(data.results[1].reasons.join(" ")).toContain("Columns");
+  }, 60_000);
+
+  test("refuses an unknown client list", async () => {
+    const result = await callTool("check_design", { html: FLEX, clients: ["nope"] });
+    expect(result.isError).toBe(true);
+  });
+});
