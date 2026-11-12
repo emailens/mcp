@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.16.0 - 2026-11-12
+
+### Added
 
 - **`check_design`**: per client, whether the email still looks like its
   design in our live preview, `kept` / `changed` / `broken`, with the reasons
@@ -8,7 +10,12 @@
   The verdict the Emailens email page shows. It draws both pages in a
   browser: install `playwright-core` beside the server, plus a local Chromium
   or `BROWSERLESS_URL`. With the optional `sharp`, it also compares the two
-  pages pixel by pixel, as the hosted check does. Needs the engine release that adds `/design`.
+  pages pixel by pixel, as the hosted check does.
+
+### Changed
+
+- **Engine 0.19.0** (from 0.18.x): the design check runner, every rule fix
+  since 0.18.0, and `measureGap` fitting at full size.
 
 ## 0.15.0 - 2026-10-29
 

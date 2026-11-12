@@ -5,7 +5,7 @@
     "": {
       "name": "@emailens/mcp",
       "dependencies": {
-        "@emailens/engine": "^0.18.0",
+        "@emailens/engine": "^0.19.0",
         "@modelcontextprotocol/sdk": "^1.32.2",
         "zod": "^4.6.7",
       },
@@ -17,6 +17,14 @@
         "tsup": "^8.5.1",
         "typescript": "^5.9.3",
       },
+      "peerDependencies": {
+        "playwright-core": ">=1.40.0",
+        "sharp": ">=0.33.0",
+      },
+      "optionalPeers": [
+        "playwright-core",
+        "sharp",
+      ],
     },
   },
   "packages": {
@@ -28,7 +36,7 @@
 
     "@colordx/core": ["@colordx/core@5.8.0", "", {}, "sha512-cG0QJAO6VkaRUlIb0zOzX9gfJgs1pjoOL9gZ/PK1kfvBs0GCkADu5oQh6gPxXgQnZ3gV575h+lQRC0NlMDTclA=="],
 
-    "@emailens/engine": ["@emailens/engine@0.18.0", "", { "dependencies": { "cheerio": "^1.2.0", "css-tree": "^3.1.0" }, "peerDependencies": { "@maizzle/framework": ">=5.0.0 <7.0.0", "@react-email/components": ">=0.0.36", "@react-email/render": ">=1.0.0", "isolated-vm": ">=5.0.0", "mjml": ">=4.0.0", "react": "^18.0.0 || ^19.0.0", "sucrase": "^3.35.0" }, "optionalPeers": ["@maizzle/framework", "@react-email/components", "@react-email/render", "isolated-vm", "mjml", "react", "sucrase"] }, "sha512-X44JYjaEJ9nz8tJM0Fh8sOno2zAVCaU3B/lMDCYSvj9Jbgc2cIMP9qiXyzeRLq58u6xC9nUyxrFGpEYi3gQCVw=="],
+    "@emailens/engine": ["@emailens/engine@0.19.0", "", { "dependencies": { "cheerio": "^1.2.0", "css-tree": "^3.1.0" }, "peerDependencies": { "@maizzle/framework": ">=5.0.0 <7.0.0", "@react-email/components": ">=0.0.36", "@react-email/render": ">=1.0.0", "isolated-vm": ">=5.0.0", "mjml": ">=4.0.0", "playwright-core": ">=1.40.0", "react": "^18.0.0 || ^19.0.0", "sharp": ">=0.33.0", "sucrase": "^3.35.0" }, "optionalPeers": ["@maizzle/framework", "@react-email/components", "@react-email/render", "isolated-vm", "mjml", "playwright-core", "react", "sharp", "sucrase"] }, "sha512-46pATTTddpuxqTg+sS54c0Vj0JKzz3ZAiAcHvuoV0PVLn/ITN6q1CW7CcA6SyGvPDMObMhoO9hwuvhgrGP9Bzg=="],
 
     "@esbuild/aix-ppc64": ["@esbuild/aix-ppc64@0.27.7", "", { "os": "aix", "cpu": "ppc64" }, "sha512-EKX3Qwmhz1eMdEJokhALr0YiD0lhQNwDqkPYyPhiSwKrh7/4KRjQc04sZ8db+5DVVnZ1LmbNDI1uAMPEUBnQPg=="],
 
