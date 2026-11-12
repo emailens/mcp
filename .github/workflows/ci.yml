@@ -28,6 +28,9 @@ jobs:
       # a dependency publishes) is latest-engine.yml's job.
       - run: bun install --frozen-lockfile
 
+      # check_design's test draws pages in a real browser.
+      - run: bunx playwright-core install --with-deps chromium
+
       - run: bun run typecheck
 
       - run: bun test
