@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.16.1 - 2026-11-18
+
+### Changed
+
+- **Engine 0.19.2**: use the current engine release for React Email 6
+  compilation and the latest design and client rendering fixes.
+
 ## 0.16.0 - 2026-11-12
 
 ### Added
